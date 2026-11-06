@@ -1,0 +1,38 @@
+{
+  "name": "calder-wren",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3847",
+    "build": "next build && node scripts/migrate.mjs",
+    "start": "next start -p 3847",
+    "lint": "eslint",
+    "test": "env -u DATABASE_URL tsx --test src/lib/chat.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@electric-sql/pglite": "^0.5.15",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.5.2",
+    "lucide-react": "^1.69.0",
+    "next": "16.4.5",
+    "pg": "^8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "shadcn": "^4.23.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}
