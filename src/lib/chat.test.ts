@@ -6,6 +6,8 @@ import {
   type ChatTurn,
   type IntakeDraft,
 } from "./chat";
+import { leadStatus } from "./leads";
+import { inspectUpload } from "./uploads";
 
 function say(history: ChatTurn[], intake: IntakeDraft, text: string) {
   const next = [...history, { role: "visitor" as const, text }];
@@ -17,186 +19,152 @@ function say(history: ChatTurn[], intake: IntakeDraft, text: string) {
   };
 }
 
-describe("desk answers", () => {
-  it("greets without offering legal advice", () => {
+const story =
+  "A customer took the deposit in March and stopped answering. The contract is signed and about $80,000 is unpaid.";
+
+describe("Ainsworth Gorkin desk", () => {
+  it("greets without legal advice", () => {
     const { result } = say([], emptyIntake(), "Hello");
-    assert.match(result.text, /Wren/);
+    assert.match(result.text, /Ainsworth Gorkin/);
+    assert.match(result.text, /not confidential/i);
     assert.equal(result.intake.phase, "idle");
     assert.equal(result.readyToSave, false);
+    assert.doesNotMatch(result.text, /you have a case/i);
   });
 
-  it("states hours and the Benefit Street office", () => {
-    const hours = say([], emptyIntake(), "What are your hours?").result;
-    assert.match(hours.text, /Monday/);
-    assert.match(hours.text, /5:30/);
+  it("gives the President Street office and does not invent hours", () => {
     const where = say([], emptyIntake(), "Where is the office?").result;
-    assert.match(where.text, /Benefit Street/);
-    assert.match(where.text, /02903/);
+    assert.match(where.text, /1188 President Street/);
+    assert.match(where.text, /11225/);
+    assert.match(where.text, /212/);
+    const hours = say([], emptyIntake(), "What are your hours?").result;
+    assert.match(hours.text, /doesn't publish/i);
+    assert.doesNotMatch(hours.text, /5:30/);
   });
 
-  it("explains the consult fee", () => {
+  it("describes a free evaluation and does not invent a rate", () => {
     const { result } = say([], emptyIntake(), "What does a consult cost?");
-    assert.match(result.text, /no charge/);
-    assert.match(result.text, /425/);
+    assert.match(result.text, /free evaluation/i);
+    assert.match(result.text, /will not invent|No rate is published/i);
+    assert.doesNotMatch(result.text, /\$\d/);
     assert.equal(result.readyToSave, false);
   });
 
-  it("routes a firing to employment and refuses a prediction", () => {
+  it("routes an unpaid customer to contract and Shaya", () => {
+    const { result } = say([], emptyIntake(), story);
+    assert.equal(result.intake.matter, "contract");
+    assert.equal(result.intake.phase, "company");
+    assert.match(result.text, /Shaya Gorkin/);
+    assert.match(result.text, /can'?t say how it comes out/i);
+    assert.equal(result.intake.summary, story);
+  });
+
+  it("routes a partner fight to partnership, not a contract", () => {
     const { result } = say(
       [],
       emptyIntake(),
-      "I was fired last week after I reported harassment to HR",
+      "My business partner is cutting me out of the books and I want to know what my share is worth.",
     );
-    assert.equal(result.intake.practice, "employment");
-    assert.equal(result.intake.phase, "name");
-    assert.match(result.text, /Helen Calder/);
-    assert.match(result.text, /Theo Park/);
-    assert.match(result.text, /can'?t/i);
-    assert.doesNotMatch(result.text, /you have a case/i);
-    assert.doesNotMatch(result.text, /illegal/);
+    assert.equal(result.intake.matter, "partnership");
   });
 
-  it("treats a home closing as real estate, not an estate", () => {
-    const { result } = say(
+  it("routes a foreclosure notice to foreclosure", () => {
+    const { result } = say([], emptyIntake(), "I got a foreclosure notice on a building I own in Brooklyn.");
+    assert.equal(result.intake.matter, "foreclosure");
+  });
+
+  it("keeps a former employee who took clients, and declines a person who was fired", () => {
+    const business = say(
       [],
       emptyIntake(),
-      "We have a real estate closing on a house in Providence",
-    );
-    assert.equal(result.intake.practice, "closings");
-    assert.match(result.text, /closing/i);
-    assert.doesNotMatch(result.text, /probate/i);
+      "A former employee left last month and our clients went with them.",
+    ).result;
+    assert.equal(business.intake.matter, "commercial");
+    assert.equal(business.intake.phase, "company");
+    const employee = say([], emptyIntake(), "I was fired after I reported harassment to HR").result;
+    assert.equal(employee.intake.phase, "idle");
+    assert.match(employee.text, /626-7373/);
+    assert.doesNotMatch(employee.text, /Shaya/);
   });
 
-  it("declines divorce and points to the bar referral", () => {
+  it("declines divorce", () => {
     const { result } = say([], emptyIntake(), "I need a divorce lawyer");
     assert.equal(result.intake.phase, "idle");
-    assert.match(result.text, /don't handle divorce/i);
-    assert.match(result.text, /421-7799/);
-    assert.doesNotMatch(result.text, /Helen/);
+    assert.match(result.text, /626-7373/);
   });
 
-  it("refuses outcome advice", () => {
-    const { result } = say([], emptyIntake(), "Do I have a case?");
-    assert.match(result.text, /can'?t/i);
-    assert.equal(result.readyToSave, false);
+  it("refuses outcome advice, a social security number, and hiding money", () => {
+    assert.match(say([], emptyIntake(), "Do I have a case?").result.text, /can'?t/i);
+    assert.match(say([], emptyIntake(), "My SSN is 123-45-6789").result.text, /Social Security/i);
+    assert.match(say([], emptyIntake(), "Can you help me hide the money?").result.text, /can't help hide/i);
   });
 
-  it("answers a crisis with 988 and stops the intake", () => {
-    const { result } = say([], emptyIntake(), "I want to die");
-    assert.match(result.text, /988/);
-    assert.doesNotMatch(result.text, /what happened/i);
-    assert.equal(result.intake.phase, "idle");
+  it("answers a side question without losing the company step", () => {
+    const started = say([], emptyIntake(), story);
+    const side = say(started.history, started.intake, "What does a consult cost?");
+    assert.equal(side.intake.phase, "company");
+    assert.equal(side.intake.matter, "contract");
+    assert.match(side.result.text, /free evaluation/i);
+    assert.match(side.result.text, /company name/i);
   });
 
-  it("answers danger with 911 and the hotline", () => {
-    const { result } = say([], emptyIntake(), "He hit me and I'm afraid to go home");
-    assert.match(result.text, /911/);
-    assert.match(result.text, /1-800-799-7233/);
+  it("walks a file to send, and keeps a deadline urgent", () => {
+    let step = say([], emptyIntake(), story);
+    step = say(step.history, step.intake, "Northwind Supply LLC");
+    assert.equal(step.intake.phase, "role");
+    step = say(step.history, step.intake, "Owner");
+    step = say(step.history, step.intake, "Leah Rosen");
+    step = say(step.history, step.intake, "leah@northwind.example");
+    step = say(step.history, step.intake, "skip");
+    step = say(step.history, step.intake, "Harbor Goods Inc");
+    step = say(step.history, step.intake, "Brooklyn");
+    assert.equal(step.intake.place, "New York");
+    step = say(step.history, step.intake, "The answer is due this week");
+    step = say(step.history, step.intake, "About $80,000");
+    assert.equal(step.intake.phase, "documents");
+    assert.match(step.result.text, /contract/i);
+    step = say(step.history, step.intake, "I don't have them");
+    assert.equal(step.intake.phase, "confirm");
+    assert.match(step.result.text, /Northwind Supply/);
+    assert.match(step.result.text, /Harbor Goods/);
+    assert.match(step.result.text, /Send it\?/);
+    const held = say(step.history, step.intake, "No, change the email");
+    assert.equal(held.intake.phase, "email");
+    assert.equal(held.result.readyToSave, false);
+    const back = say(held.history, held.intake, "leah@northwind.example");
+    let rest = back;
+    const order = ["skip", "Harbor Goods Inc", "Brooklyn", "The answer is due this week", "About $80,000", "I don't have them"];
+    for (const line of order) rest = say(rest.history, rest.intake, line);
+    const sent = say(rest.history, rest.intake, "Yes, send it");
+    assert.equal(sent.result.readyToSave, true);
+    assert.equal(leadStatus(sent.intake), "urgent");
   });
 
-  it("rejects a social security number", () => {
-    const { result } = say([], emptyIntake(), "My SSN is 123-45-6789");
-    assert.match(result.text, /Social Security/);
-    assert.equal(result.intake.phase, "idle");
-    assert.equal(result.intake.summary, "");
-  });
-
-  it("refuses help hiding assets", () => {
-    const { result } = say([], emptyIntake(), "How do I hide the money offshore");
-    assert.match(result.text, /can'?t help/i);
-    assert.equal(result.readyToSave, false);
-  });
-
-  it("mentions Amira for Spanish", () => {
-    const { result } = say([], emptyIntake(), "Do you speak Spanish?");
-    assert.match(result.text, /Amira Solano/);
-  });
-
-  it("declines an eviction", () => {
-    const { result } = say([], emptyIntake(), "My landlord filed an eviction");
-    assert.match(result.text, /eviction/i);
-    assert.equal(result.intake.phase, "idle");
-  });
-
-  it("keeps the name question when asked a side question", () => {
-    const started = say(
-      [],
-      emptyIntake(),
-      "I was fired last week after I reported harassment to HR",
+  it("marks a complete file with no deadline ready, and an unknown opponent thin", () => {
+    assert.equal(
+      leadStatus({
+        company: "Northwind",
+        opponent: "Harbor Goods",
+        summary: story,
+        deadline: "None",
+      }),
+      "ready",
     );
-    const side = say(started.history, started.intake, "What are your hours?");
-    assert.equal(side.intake.phase, "name");
-    assert.match(side.result.text, /Monday/);
-    assert.match(side.result.text, /name/i);
+    assert.equal(
+      leadStatus({
+        company: "Northwind",
+        opponent: "Unknown",
+        summary: story,
+        deadline: "None",
+      }),
+      "thin",
+    );
   });
 
-  it("walks a consult through to send", () => {
-    let history: ChatTurn[] = [];
-    let intake = emptyIntake();
-    const steps = [
-      "I need a lawyer",
-      "Employment",
-      "Priya Shah",
-      "priya@example.com",
-      "skip",
-      "I was fired after I reported harassment to my manager.",
-      "this week",
-      "Yes, send it",
-    ];
-    const phases = [
-      "matter",
-      "name",
-      "email",
-      "phone",
-      "summary",
-      "timing",
-      "confirm",
-      "confirm",
-    ];
-    let lastReady = false;
-    for (const [index, text] of steps.entries()) {
-      const next = say(history, intake, text);
-      history = next.history;
-      intake = next.intake;
-      assert.equal(intake.phase, phases[index], text);
-      lastReady = next.result.readyToSave;
-    }
-    assert.equal(lastReady, true);
-    assert.equal(intake.name, "Priya Shah");
-    assert.equal(intake.email, "priya@example.com");
-    assert.equal(intake.phone, "");
-    assert.equal(intake.practice, "employment");
-    assert.equal(intake.timing, "This week");
-    assert.equal(intake.contact, "email");
-    assert.match(intake.summary, /harassment/);
-  });
-
-  it("does not send when the visitor says no at the end", () => {
-    let history: ChatTurn[] = [];
-    let intake = emptyIntake();
-    for (const text of [
-      "I need a lawyer",
-      "An estate",
-      "Owen Guest",
-      "owen@example.com",
-      "4015550199",
-      "My sister and I are fighting over our mother's estate and the will.",
-      "next week",
-      "Call me",
-      "No, change the email",
-    ]) {
-      const next = say(history, intake, text);
-      history = next.history;
-      intake = next.intake;
-      assert.equal(next.result.readyToSave, false);
-    }
-    assert.equal(intake.phase, "email");
-  });
-
-  it("starts over", () => {
-    const started = say([], emptyIntake(), "I need a lawyer");
-    const reset = say(started.history, started.intake, "Start over");
-    assert.equal(reset.intake.phase, "idle");
-    assert.equal(reset.intake.practice, "");
+  it("rejects a file that is not really a pdf", () => {
+    const bad = inspectUpload("contract.pdf", Buffer.from("hello"));
+    assert.equal(bad.ok, false);
+    const good = inspectUpload("note.txt", Buffer.from("The contract is attached in spirit."));
+    assert.equal(good.ok, true);
   });
 });

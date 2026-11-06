@@ -1,5 +1,5 @@
-import { createConsultation, validateConsultation } from "@/lib/consultations";
 import { firm } from "@/lib/firm";
+import { createLead, leadStatus, validateLead } from "@/lib/leads";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -8,31 +8,31 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "We couldn't read that form." }, { status: 400 });
   }
-
   if (!body || typeof body !== "object") {
     return Response.json({ error: "We couldn't read that form." }, { status: 400 });
   }
-
   const raw = body as Record<string, unknown>;
   if (typeof raw.fax === "string" && raw.fax.trim()) {
-    return Response.json({ reference: "CW-0000" });
+    return Response.json({ reference: "AG-0000", status: "thin" });
   }
-
-  const validated = validateConsultation(raw, "form");
-  if (!validated.ok) {
-    return Response.json({ error: validated.error }, { status: 400 });
-  }
-
+  const validated = validateLead(raw, "form");
+  if (!validated.ok) return Response.json({ error: validated.error }, { status: 400 });
   try {
-    const reference = await createConsultation(validated.value);
+    const saved = await createLead(validated.value);
+    const status = saved.status || leadStatus(validated.value);
+    const mark =
+      status === "urgent"
+        ? "It's marked as a deadline."
+        : status === "ready"
+          ? "It's marked ready for review."
+          : "It's marked thin, because a name or a fact is still missing.";
     return Response.json({
-      reference,
-      reply: `We'll reply within one business day. If you don't hear back, call ${firm.phone}.`,
+      reference: saved.reference,
+      status,
+      reply: `Filed as ${saved.reference}. ${mark} If you don't hear back, call ${firm.phone}.`,
     });
   } catch {
-    return Response.json(
-      { error: `We couldn't file that. Call ${firm.phone}.` },
-      { status: 500 },
-    );
+    console.error("lead insert failed");
+    return Response.json({ error: `We couldn't file that. Call ${firm.phone}.` }, { status: 500 });
   }
 }

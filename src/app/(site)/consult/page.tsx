@@ -5,7 +5,7 @@ import { firm } from "@/lib/firm";
 
 export const metadata: Metadata = {
   title: "Request a consultation",
-  description: "A 30-minute conversation about a new matter, at no charge.",
+  description: "File a business matter, with the papers, for a free evaluation.",
 };
 
 export default function ConsultPage() {

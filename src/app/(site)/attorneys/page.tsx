@@ -5,7 +5,7 @@ import { attorneys } from "@/lib/firm";
 
 export const metadata: Metadata = {
   title: "Attorneys",
-  description: "Helen Calder, Owen Wren, Amira Solano, and Theo Park.",
+  description: "Levi Ainsworth, Shaya Gorkin, and Yehuda C. Morgenstern.",
 };
 
 export default function AttorneysPage() {
@@ -13,7 +13,7 @@ export default function AttorneysPage() {
     <main className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
       <p className="text-[0.68rem] tracking-[0.2em] text-primary uppercase">Attorneys</p>
       <h1 className="mt-3 max-w-2xl font-heading text-4xl tracking-tight sm:text-5xl">
-        Four lawyers. You will know who is on the file.
+        The lawyers on the file.
       </h1>
       <ul className="mt-12 grid gap-6 md:grid-cols-2">
         {attorneys.map((attorney) => (

@@ -6,7 +6,7 @@ import { attorneys, firm, practices } from "@/lib/firm";
 import { cn } from "@/lib/utils";
 
 const samplePrompt =
-  "I was let go after I told my manager I was pregnant.";
+  "A customer took the deposit in March and stopped answering. The contract is signed. About $80,000 is unpaid.";
 
 export default function HomePage() {
   return (
@@ -14,17 +14,16 @@ export default function HomePage() {
       <section className="mx-auto grid w-full max-w-6xl gap-12 px-5 py-14 sm:px-8 lg:grid-cols-12 lg:py-20">
         <div className="lg:col-span-7">
           <p className="text-[0.68rem] tracking-[0.2em] text-primary uppercase">
-            Providence · Benefit Street
+            Test desk · ainsworthgorkin.com
           </p>
           <h1 className="mt-4 max-w-xl font-heading text-[2.7rem] leading-[1.02] tracking-tight sm:text-6xl">
-            A direct answer, then a lawyer who{" "}
-            <span className="italic">stays with the file.</span>
+            A lead the lawyers can{" "}
+            <span className="italic">actually review.</span>
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
-            Calder & Wren is a small firm for employment disputes, fights
-            inside closely held companies, estates, and Rhode Island home
-            closings. The desk can match the work and take a message. It will
-            not guess how a case comes out.
+            This is the intake for Ainsworth Gorkin, the Brooklyn firm for New York
+            and New Jersey businesses. The desk qualifies the matter, asks for the
+            papers, and files a packet. It will not guess how a case comes out.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <OpenDesk>Ask the desk</OpenDesk>
@@ -37,16 +36,16 @@ export default function HomePage() {
           </div>
           <dl className="mt-10 grid grid-cols-2 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-muted-foreground">First call</dt>
-              <dd className="mt-1 font-heading text-2xl">30 min</dd>
+              <dt className="text-muted-foreground">First look</dt>
+              <dd className="mt-1 font-heading text-2xl">Free</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">For a new matter</dt>
-              <dd className="mt-1 font-heading text-2xl">No charge</dd>
+              <dt className="text-muted-foreground">Licensed</dt>
+              <dd className="mt-1 font-heading text-2xl">NY & NJ</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Office</dt>
-              <dd className="mt-1 font-heading text-2xl">Benefit St.</dd>
+              <dd className="mt-1 font-heading text-2xl">President St.</dd>
             </div>
           </dl>
         </div>
@@ -63,9 +62,9 @@ export default function HomePage() {
                 {samplePrompt}
               </p>
               <p>
-                That is employment work, which Helen Calder and Theo Park
-                handle. I can&apos;t say whether the firing was lawful. The
-                first conversation is 30 minutes and there is no charge.
+                That is a broken contract, which Shaya Gorkin reviews. The desk
+                asks for the agreement and the invoices. It will not say whether
+                the money is recoverable. The first look is free.
               </p>
             </div>
             <OpenDesk prompt={samplePrompt} variant="secondary" className="mt-6 w-full">
@@ -79,7 +78,7 @@ export default function HomePage() {
         <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
           <div className="flex items-end justify-between gap-4">
             <h2 className="font-heading text-3xl tracking-tight sm:text-4xl">
-              Four kinds of work
+              The work
             </h2>
             <Link
               href="/practices"
@@ -96,7 +95,7 @@ export default function HomePage() {
                   className="group grid gap-2 py-5 sm:grid-cols-[4rem_1fr_auto] sm:items-baseline"
                 >
                   <span className="font-heading text-xl text-primary">
-                    0{index + 1}
+                    {String(index + 1).padStart(2, "0")}
                   </span>
                   <span>
                     <span className="font-heading text-2xl tracking-tight">
@@ -120,9 +119,9 @@ export default function HomePage() {
         <div>
           <h2 className="font-heading text-3xl tracking-tight">What the desk will do</h2>
           <ul className="mt-5 space-y-3 text-sm leading-6">
-            <li>Match a situation to the lawyer who actually does that work.</li>
-            <li>Explain the 30-minute conversation, the hourly ranges, and what happens before anyone is a client.</li>
-            <li>Take your name, a way to reach you, and a short account of what happened.</li>
+            <li>Sort a business dispute from work the firm does not take.</li>
+            <li>Ask for the company, the other side, the deadline, and the papers.</li>
+            <li>Leave a file marked ready, thin, or on a deadline.</li>
           </ul>
         </div>
         <div>
@@ -130,7 +129,7 @@ export default function HomePage() {
           <ul className="mt-5 space-y-3 text-sm leading-6">
             <li>Tell you whether you have a case, or whether to sign.</li>
             <li>Pretend a chat is privileged. {firm.consult.privilegeLine}</li>
-            <li>Take criminal, family, immigration, injury, bankruptcy, or eviction matters.</li>
+            <li>Take personal injury, criminal defense, divorce, immigration, or an employee&apos;s own firing.</li>
           </ul>
         </div>
       </section>
@@ -165,10 +164,10 @@ export default function HomePage() {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-14 sm:px-8 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="max-w-xl font-heading text-4xl leading-tight tracking-tight">
-              Thirty minutes. No charge. No engagement until both sides say so.
+              A free look. Then a file, not a guess.
             </h2>
             <p className="mt-3 max-w-lg text-sm leading-6 text-primary-foreground/80">
-              {firm.consult.replyLine} Call {firm.phone} if a hearing or a closing is already on the calendar.
+              {firm.consult.replyLine} Call {firm.phone} if a hearing is already on the calendar.
             </p>
           </div>
           <OpenDesk

@@ -1,18 +1,20 @@
-# Calder & Wren
+# Ainsworth Gorkin desk
 
-A demonstration law-firm site with a front-desk chatbot. Visitors can ask what the firm handles, who the lawyers are, what a first conversation costs, and leave a message for a consultation.
+A test intake desk for [Ainsworth Gorkin](https://ainsworthgorkin.com), a Brooklyn firm for New York and New Jersey businesses. The firm's own site is on Squarespace. This app is the desk you paste onto it.
 
-The desk answers only from the firm profile in `src/lib/firm.ts`. It does not call a language model, so it will not invent legal advice, predict an outcome, or drift off the firm’s actual work. That is deliberate: a firm site should not freelance.
+The desk qualifies a matter, asks for the company, the other side, the deadline, and the papers, and files a packet a lawyer can review. It answers only from `src/lib/firm.ts`. It does not call a language model, invent a fee, or say how a case comes out.
+
+Open `/review` to read the queue. On a dev server the password is `desk-review`. On the published app it is the `REVIEW_PASSWORD` secret.
 
 ## Use it
 
-- **Ask the desk** opens on every page. Try “I was fired,” “What does a consult cost?”, or “I need a divorce lawyer.”
-- **Request a consultation** is the same intake as a form, if someone would rather not chat.
-- A filed message gets a reference like `CW-7K2Q`. The firm replies within one business day in the story of the site. Nothing here creates an attorney-client relationship.
+- **Ask the desk** and try “A customer took the deposit and stopped answering,” “I was fired,” or “I got a foreclosure notice.”
+- **Request a consultation** files the same kind of packet without the chat.
+- A filed lead gets a reference like `AG-7K2Q` and a mark: ready, thin, or deadline. Nothing here hires the firm.
 
 ## Squarespace
 
-The firm site can stay on Squarespace. This app is the desk, and Squarespace only loads it.
+ainsworthgorkin.com stays on Squarespace. This app is the desk.
 
 Open `/squarespace` on the published app and copy the snippet. Paste it into **Footer code injection** (Pages → Custom Code → Code Injection). That needs a Core, Plus, or Advanced plan, or a legacy plan that still includes code injection. Basic will not run it.
 
@@ -22,7 +24,7 @@ A Code block on a single page can hold the iframe snippet from the same install 
 
 Practice and lawyer links inside an embedded answer open in a new tab, so the chat stays open on the Squarespace page.
 
-Calder & Wren is sample content, not a law office. The phone number is fictional. The Rhode Island Bar referral number is real, and the desk uses it only when the firm does not take the work.
+The phone, address, and practice list are taken from the firm's public site. The New York City Bar referral number is real, and the desk uses it only when the firm does not take the work.
 
 ## Make it your firm
 
@@ -44,9 +46,9 @@ npm run lint
 
 ## Where messages go
 
-Consultation messages are stored in a `consultations` table.
+Leads and their files are stored in `leads` and `lead_files`.
 
 - With `DATABASE_URL`, the app uses Postgres. Publishing this app can attach a database for that.
 - Without `DATABASE_URL`, local development uses an in-memory database, so messages last only as long as that server process.
 
-There is no public inbox. A message is confirmed to the person who sent it, and that is the only place it is shown.
+There is no public inbox. The person who sent a file sees the reference. Lawyers read the queue at `/review`.

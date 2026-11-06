@@ -71,6 +71,12 @@ async function PracticeBody({
               <li key={item}>{item}</li>
             ))}
           </ul>
+          <h2 className="pt-4 font-heading text-2xl">Papers the desk asks for</h2>
+          <ul className="space-y-2 text-sm leading-6">
+            {practice.documents.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
           <h2 className="pt-4 font-heading text-2xl">What we don&apos;t</h2>
           <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
             {practice.declines.map((item) => (

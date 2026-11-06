@@ -4,7 +4,10 @@ import pg from "pg";
 
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 let pool: pg.Pool | undefined;
-let local: Promise<PGlite> | undefined;
+
+const globalForDb = globalThis as typeof globalThis & {
+  __agDesk?: Promise<PGlite>;
+};
 
 export async function sql<T = Record<string, unknown>>(
   text: string,
@@ -14,11 +17,11 @@ export async function sql<T = Record<string, unknown>>(
     pool ??= new pg.Pool({ connectionString: databaseUrl, max: 5 });
     return (await pool.query(text, params)).rows as T[];
   }
-  local ??= startLocal().catch((error: unknown) => {
-    local = undefined;
+  globalForDb.__agDesk ??= startLocal().catch((error: unknown) => {
+    globalForDb.__agDesk = undefined;
     throw error;
   });
-  return (await (await local).query<T>(text, params)).rows;
+  return (await (await globalForDb.__agDesk).query<T>(text, params)).rows;
 }
 
 async function startLocal(): Promise<PGlite> {

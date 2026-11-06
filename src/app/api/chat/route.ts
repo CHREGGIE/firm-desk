@@ -1,24 +1,28 @@
+import { firm } from "@/lib/firm";
 import {
   emptyIntake,
   respond,
   savedMessage,
   type ChatCard,
   type ChatTurn,
-  type IntakeContact,
   type IntakeDraft,
   type IntakePhase,
 } from "@/lib/chat";
-import { createConsultation, validateConsultation } from "@/lib/consultations";
+import { createLead, validateLead } from "@/lib/leads";
 
 const PHASES = new Set<IntakePhase>([
   "idle",
-  "matter",
+  "company",
+  "role",
   "name",
   "email",
   "phone",
+  "opponent",
+  "place",
+  "deadline",
+  "stake",
   "summary",
-  "timing",
-  "contact",
+  "documents",
   "confirm",
   "saved",
 ]);
@@ -30,7 +34,6 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "The desk couldn't read that." }, { status: 400 });
   }
-
   if (!body || typeof body !== "object") {
     return Response.json({ error: "The desk couldn't read that." }, { status: 400 });
   }
@@ -38,54 +41,31 @@ export async function POST(request: Request) {
   const payload = body as { messages?: unknown; intake?: unknown };
   const messages = parseMessages(payload.messages);
   if (!messages) {
-    return Response.json(
-      { error: "Send a short message and try again." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Send a short message and try again." }, { status: 400 });
   }
 
-  const intake = parseIntake(payload.intake);
-  let result = respond(messages, intake);
-
+  let result = respond(messages, parseIntake(payload.intake));
   if (result.readyToSave) {
-    const validated = validateConsultation(
-      {
-        name: result.intake.name,
-        email: result.intake.email,
-        phone: result.intake.phone,
-        practice: result.intake.practice,
-        summary: result.intake.summary,
-        timing: result.intake.timing,
-        contact: result.intake.contact,
-      },
-      "chat",
-    );
+    const validated = validateLead(result.intake, "chat");
     if (!validated.ok) {
-      result = {
-        ...result,
-        readyToSave: false,
-        text: validated.error,
-      };
+      result = { ...result, readyToSave: false, text: validated.error };
     } else {
       try {
-        const reference = await createConsultation(validated.value);
-        const card: ChatCard = {
-          kind: "confirmation",
-          reference,
-          title: "Message filed",
-        };
+        const saved = await createLead(validated.value);
+        const card: ChatCard = { kind: "confirmation", reference: saved.reference, title: "File for review" };
         result = {
-          text: savedMessage(reference),
+          text: savedMessage(saved.reference, saved.status),
           cards: [card],
-          suggestions: ["Where is the office?", "Who will call me?", "Start over"],
+          suggestions: ["Where is the office?", "Start over"],
           intake: { ...result.intake, phase: "saved" },
           readyToSave: false,
         };
       } catch {
+        console.error("lead insert failed");
         result = {
           ...result,
           readyToSave: false,
-          text: "I have the details, but I couldn't file them just now. Say yes to try again, or call (401) 555-0148.",
+          text: `I have the details, but I couldn't file them just now. Say yes to try again, or call ${firm.phone}.`,
           suggestions: ["Yes, send it"],
         };
       }
@@ -101,7 +81,7 @@ export async function POST(request: Request) {
 }
 
 function parseMessages(value: unknown): ChatTurn[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 30) return null;
+  if (!Array.isArray(value) || value.length === 0 || value.length > 40) return null;
   const messages: ChatTurn[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") return null;
@@ -124,18 +104,21 @@ function parseIntake(value: unknown): IntakeDraft {
   const phase = typeof raw.phase === "string" && PHASES.has(raw.phase as IntakePhase)
     ? (raw.phase as IntakePhase)
     : "idle";
-  const contact = raw.contact;
-  const safeContact: IntakeContact =
-    contact === "phone" || contact === "email" || contact === "either" ? contact : "";
   return {
+    phase,
+    matter: clip(raw.matter, 40),
+    company: clip(raw.company, 120),
+    role: clip(raw.role, 80),
     name: clip(raw.name, 80),
     email: clip(raw.email, 120),
     phone: clip(raw.phone, 30),
-    practice: clip(raw.practice, 40),
+    opponent: clip(raw.opponent, 120),
+    place: clip(raw.place, 80),
+    deadline: clip(raw.deadline, 120),
+    stake: clip(raw.stake, 200),
     summary: clip(raw.summary, 1000),
-    timing: clip(raw.timing, 80),
-    contact: safeContact,
-    phase,
+    docNote: clip(raw.docNote, 1000),
+    draftId: /^[a-f0-9]{24}$/.test(clip(raw.draftId, 64)) ? clip(raw.draftId, 64) : "",
   };
 }
 

@@ -36,10 +36,10 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
         <Link href="/" className="min-w-0">
           <span className="block font-heading text-xl leading-none tracking-tight">
-            Calder & Wren
+            Ainsworth Gorkin
           </span>
           <span className="mt-1 block text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
-            Providence
+            Brooklyn
           </span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex" aria-label="Primary">
@@ -72,7 +72,7 @@ export function SiteHeader() {
             <SheetContent side="left" className="w-[min(100%,20rem)]">
               <SheetHeader>
                 <SheetTitle className="font-heading text-2xl">
-                  Calder & Wren
+                  Ainsworth Gorkin
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-4" aria-label="Mobile">

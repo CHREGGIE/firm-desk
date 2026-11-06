@@ -15,11 +15,11 @@ const display = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Calder & Wren",
-    template: "%s · Calder & Wren",
+    default: "Ainsworth Gorkin desk",
+    template: "%s · Ainsworth Gorkin",
   },
   description:
-    "A Providence firm for employment disputes, business conflicts, estates, and home closings. Ask the desk, or request a 30-minute consultation.",
+    "A test intake desk for Ainsworth Gorkin. It qualifies a business matter, collects the papers, and leaves a file for the lawyers.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

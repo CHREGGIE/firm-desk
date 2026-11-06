@@ -8,7 +8,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-border">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-3">
         <div>
-          <p className="font-heading text-2xl">Calder & Wren</p>
+          <p className="font-heading text-2xl">Ainsworth Gorkin</p>
           <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
             {firm.tagline}
           </p>
@@ -62,13 +62,19 @@ export function SiteFooter() {
                 Add the desk to Squarespace
               </Link>
             </li>
+            <li>
+              <Link className="underline decoration-border underline-offset-4" href="/review">
+                Lawyer review
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
       <div className="border-t border-border">
         <p className="mx-auto w-full max-w-6xl px-5 pt-4 pb-20 text-xs leading-5 text-muted-foreground sm:px-8 md:pb-4">
-          Calder & Wren is a demonstration firm, not a law office. Nothing on
-          this site is legal advice. Sending a message does not create an
+          This is a test of the intake desk for Ainsworth Gorkin PLLC, built to
+          sit on their Squarespace site. It is not the firm&apos;s website.
+          Nothing here is legal advice. Sending a message does not create an
           attorney-client relationship, and it is not confidential until an
           engagement letter is signed.
         </p>

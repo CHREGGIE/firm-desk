@@ -25,7 +25,7 @@ export function SquarespaceGuide() {
   const origin = useOrigin();
   const local = isLocalOrigin(origin);
   const scriptSnippet = origin
-    ? `<!-- Calder & Wren desk. Paste once, into the footer. -->\n<script src="${origin}/widget.js?v=1" defer></script>`
+    ? `<!-- Ainsworth Gorkin desk. Paste once, into the footer. -->\n<script src="${origin}/widget.js?v=1" defer></script>`
     : "";
   const frameSnippet = origin
     ? `<div style="position:relative;height:640px;">\n  <iframe\n    src="${origin}/embed"\n    title="Ask the desk"\n    style="position:absolute;inset:0;width:100%;height:100%;border:0;"\n  ></iframe>\n</div>`

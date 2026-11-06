@@ -6,6 +6,8 @@ export type Practice = {
   paragraphs: string[];
   handles: string[];
   declines: string[];
+  documents: string[];
+  keywords: string[];
   lawyerSlugs: string[];
 };
 
@@ -27,198 +29,451 @@ export type Office = {
   note: string;
 };
 
+const declines = [
+  "Personal injury and medical malpractice",
+  "Criminal defense",
+  "Divorce, custody, and other family matters",
+  "Immigration",
+  "An individual employee's claim against their employer",
+];
+
 export const firm = {
-  name: "Calder & Wren",
-  city: "Providence",
-  tagline: "Counsel for work, property, and what you leave behind.",
-  phone: "(401) 555-0148",
-  phoneHref: "tel:+14015550148",
-  email: "desk@calderandwren.example",
-  emailHref: "mailto:desk@calderandwren.example",
+  name: "Ainsworth Gorkin",
+  legalName: "Ainsworth Gorkin PLLC",
+  city: "Brooklyn",
+  site: "https://ainsworthgorkin.com",
+  tagline: "Commercial litigation and counsel for New York and New Jersey businesses.",
+  phone: "(212) 913-0217",
+  phoneHref: "tel:+12129130217",
+  email: "info@ainsworthgorkin.com",
+  emailHref: "mailto:info@ainsworthgorkin.com",
   hours: [
-    { days: "Monday–Thursday", hours: "9:00 a.m. – 5:30 p.m." },
-    { days: "Friday", hours: "9:00 a.m. – 3:00 p.m." },
-    { days: "Saturday and Sunday", hours: "Closed" },
+    {
+      days: "By phone",
+      hours: "Hours aren't published. Call, and a lawyer answers.",
+    },
   ],
   consult: {
     feeLine:
-      "The first conversation about a new matter is 30 minutes, by phone or at Benefit Street, and there is no charge.",
+      "Every new matter starts with a free evaluation. You describe what happened. The firm says what it thinks it is, whether it's worth pursuing, and whether this is the right office.",
     billingLine:
-      "If we agree to take the work, partners bill $425–$525 an hour. Counsel and associates bill $275–$375. A straightforward will, or a Rhode Island home closing, is often a flat fee, quoted after that first conversation.",
+      "Fees are hourly, a flat fee, or a hybrid. The firm explains the number before work starts. No rate is published on the site, so this desk will not invent one.",
     engagementLine:
-      "A message to the desk does not hire the firm. We run a conflict check, then both sides have to agree, in writing, before anyone is a client.",
+      "A message to the desk does not hire the firm. The firm runs a conflict check, then both sides agree in writing before anyone is a client.",
     replyLine:
-      "We reply within one business day. Messages marked urgent are read first on the next weekday morning.",
+      "If something is due this week, say so. Restraining orders, injunctions, and answer deadlines move in days.",
     privilegeLine:
-      "Writing here is not confidential yet, and it is not an attorney-client relationship. Don't send Social Security numbers, account numbers, or medical records. Privilege starts only if we send an engagement letter and you sign it.",
+      "Writing here is not confidential yet, and it is not an attorney-client relationship. Don't send Social Security numbers, account numbers, or medical records.",
   },
   referralLine:
-    "For a lawyer who does that work, call the Rhode Island Bar Association's Lawyer Referral Service at (401) 421-7799 on weekdays, or start at https://ribar.com/?pg=lawyerreferralservice.",
+    "For a New York lawyer who does that work, call the New York City Bar Legal Referral Service at (212) 626-7373 (Spanish: (212) 626-7374), or start at https://www.nycbar.org/get-legal-help/.",
 } as const;
 
 export const offices: Office[] = [
   {
-    name: "Benefit Street",
-    lines: ["48 Benefit Street", "Providence, RI 02903"],
-    note: "Main office. Street parking on Benefit, and lots toward South Main.",
-  },
-  {
-    name: "Boston, by appointment",
-    lines: ["1 Federal Street, Suite 400", "Boston, MA 02110"],
-    note: "Tuesday afternoons only. Ask when you book.",
+    name: "President Street",
+    lines: ["1188 President Street, Suite 203", "Brooklyn, NY 11225"],
+    note: "The office listed on ainsworthgorkin.com. Licensed in New York and New Jersey.",
   },
 ];
 
 export const practices: Practice[] = [
   {
-    slug: "employment",
-    title: "Employment & workplace",
-    blurb: "Firings, discrimination, wages, severance, and noncompetes.",
-    chatLead: "That sounds like an employment matter.",
+    slug: "contract",
+    title: "Breach of contract",
+    blurb: "A customer, vendor, or partner took the money, or stopped doing what they promised.",
+    chatLead: "That sounds like a broken contract.",
     paragraphs: [
-      "We represent employees and small employers in workplace disputes. The first question is always a conflict check: we will not sit down with both sides of the same fight.",
-      "Bring the dates, the handbook, and whatever was put in writing. A timeline is more useful than a theory.",
+      "The firm sues and defends when a business promise breaks: vendors, customers, partners, and the people who signed for them.",
+      "The useful first packet is the agreement, the money, and the last thing anybody put in writing.",
     ],
     handles: [
-      "Termination and severance review",
-      "Discrimination, harassment, and retaliation",
-      "Unpaid wages and overtime",
-      "Noncompete and nonsolicit review",
-      "Handbooks and executive agreements for small employers",
+      "Unpaid invoices and deposits",
+      "A vendor or customer who stopped performing",
+      "A signed deal nobody is honoring",
     ],
-    declines: [
-      "Union grievances under a collective bargaining agreement",
-      "ERISA class actions",
-      "Coaching anyone on how to hide a firing",
+    declines,
+    documents: [
+      "The contract, proposal, or terms they accepted",
+      "Invoices, or proof of what was paid",
+      "The last email, text, or demand",
     ],
-    lawyerSlugs: ["helen-calder", "theo-park"],
+    keywords: [
+      "contract",
+      "invoice",
+      "deposit",
+      "stopped paying",
+      "didn't pay",
+      "did not pay",
+      "vendor",
+      "customer",
+      "owes",
+      "breach",
+      "unpaid",
+    ],
+    lawyerSlugs: ["shaya-gorkin", "yehuda-morgenstern"],
   },
   {
-    slug: "business",
-    title: "Business disputes",
-    blurb: "Contracts, unpaid bills, and fights inside closely held companies.",
-    chatLead: "That sounds like a business dispute.",
+    slug: "partnership",
+    title: "Partnership disputes",
+    blurb: "A partner is cutting you out, or you want out and cannot agree what the share is worth.",
+    chatLead: "That sounds like a fight inside the company.",
     paragraphs: [
-      "Most of this work is a broken promise between people who already know each other: a partner, a vendor, a customer who stopped paying.",
-      "We read the contract and the emails before we talk about a lawsuit. A lot of these files settle once the numbers are on one page.",
+      "Dissolution, forced buyouts, and fiduciary fights when owners stop trusting each other.",
+      "The operating agreement and the ownership split are the papers the lawyers read first.",
     ],
     handles: [
-      "Broken contracts between companies that know each other",
-      "Unpaid invoices and disputed bills",
-      "Partnership and shareholder fights in closely held companies",
-      "Business breakups and buyouts",
+      "Being shut out of decisions or the books",
+      "A buyout nobody can price",
+      "Dissolution of an LLC or a close corporation",
     ],
-    declines: [
-      "Securities, public offerings, and venture financing",
-      "Patents and trademarks",
-      "Bet-the-company cases for large corporations",
+    declines,
+    documents: [
+      "The operating agreement, shareholder agreement, or partnership agreement",
+      "Anything that shows who owns what",
+      "Emails about being shut out of decisions or the books",
     ],
-    lawyerSlugs: ["helen-calder", "amira-solano"],
+    keywords: [
+      "partner",
+      "partnership",
+      "cutting me out",
+      "shut out",
+      "buyout",
+      "buy out",
+      "operating agreement",
+      "shareholder",
+      "my share",
+      "the books",
+    ],
+    lawyerSlugs: ["shaya-gorkin", "levi-ainsworth"],
   },
   {
-    slug: "estates",
-    title: "Wills, trusts & probate",
-    blurb: "Wills, revocable trusts, and estates that need administering.",
-    chatLead: "That sounds like an estate matter.",
+    slug: "real-estate",
+    title: "Real estate disputes",
+    blurb: "A deal, a commercial lease, or a construction claim came apart.",
+    chatLead: "That sounds like a real estate dispute.",
     paragraphs: [
-      "Owen Wren drafts the will and stays on to probate it. Contested estates of modest size stay in the office; we say so early if a file needs a bigger litigation team.",
-      "If a house is part of the estate, the closing practice can pick up the sale once the probate questions are clear.",
+      "Failed transactions, lease fights, and construction claims for owners and investors.",
+      "A residential tenant being evicted from an apartment is not this practice. A business lease or a deal that died is.",
     ],
     handles: [
-      "Wills and revocable trusts",
-      "Probate administration",
-      "Will contests of modest size",
-      "Coordinating the sale of a house that sits inside an estate",
+      "A buyer, seller, landlord, or commercial tenant who walked away",
+      "Construction claims on a property the business owns",
+      "A deal that closed on numbers that were wrong",
     ],
-    declines: [
-      "Tax controversy",
-      "Medicaid planning as a standalone service",
-      "Guardianship fights as a main practice",
+    declines: [...declines, "Eviction of a residential tenant from their apartment"],
+    documents: [
+      "The contract, lease, or deal email",
+      "The notice, or the message where they walked away",
     ],
-    lawyerSlugs: ["owen-wren"],
+    keywords: [
+      "lease",
+      "landlord",
+      "commercial tenant",
+      "my tenant",
+      "real estate",
+      "the property",
+      "walked away",
+      "construction",
+      "closing",
+    ],
+    lawyerSlugs: ["shaya-gorkin"],
   },
   {
-    slug: "closings",
-    title: "Home closings",
-    blurb: "Rhode Island home purchases and sales, and the title questions before you sign.",
-    chatLead: "That sounds like a residential closing.",
+    slug: "foreclosure",
+    title: "Foreclosure defense",
+    blurb: "A lender started a foreclosure on property you own.",
+    chatLead: "That sounds like a foreclosure.",
     paragraphs: [
-      "We represent buyers and sellers of homes in Rhode Island, and some nearby Massachusetts closings by arrangement. We do not represent both sides of the same sale.",
-      "Send the purchase and sale agreement before the weekend you plan to sign. Title problems are cheaper to find on a Tuesday than at the table.",
+      "The firm defends foreclosures, including challenges to the papers the lender filed.",
+      "The notice or the summons is the document that tells the lawyers how fast this moves.",
     ],
     handles: [
-      "Buying or selling a home in Rhode Island",
-      "Nearby Massachusetts closings, by arrangement",
-      "Title questions before you sign",
-      "Review of a purchase and sale agreement",
+      "A foreclosure notice or summons",
+      "A sale date that is already on the calendar",
+      "A challenge to the way the case was filed",
     ],
-    declines: [
-      "Commercial development",
-      "Evictions and landlord-tenant court",
-      "Construction-defect litigation",
+    declines,
+    documents: [
+      "The foreclosure notice, summons, or complaint",
+      "The mortgage or note, if you have it",
     ],
-    lawyerSlugs: ["owen-wren", "theo-park"],
+    keywords: ["foreclosure", "mortgage", "lis pendens", "bank is taking", "sale date"],
+    lawyerSlugs: ["shaya-gorkin"],
+  },
+  {
+    slug: "commercial",
+    title: "Corporate and commercial disputes",
+    blurb: "Shareholder fights, a deal that was misdescribed, or a former employee who took the clients.",
+    chatLead: "That sounds like a commercial dispute.",
+    paragraphs: [
+      "Shareholder and executive fights, and commercial claims in state and federal court.",
+      "The firm represents the business. It does not represent an employee suing their employer.",
+    ],
+    handles: [
+      "Shareholder and executive conflicts",
+      "A deal whose numbers turned out to be wrong",
+      "A former employee who left with clients or information",
+    ],
+    declines,
+    documents: [
+      "The agreement that was broken",
+      "The emails or figures that turned out to be wrong",
+    ],
+    keywords: [
+      "former employee",
+      "our employee",
+      "took our clients",
+      "clients went",
+      "shareholder",
+      "executive",
+      "misrepresented",
+      "the numbers were wrong",
+      "noncompete",
+      "stolen",
+    ],
+    lawyerSlugs: ["shaya-gorkin", "yehuda-morgenstern"],
+  },
+  {
+    slug: "finance",
+    title: "Alternative finance",
+    blurb: "Loans, MCA agreements, guaranties, and confessions of judgment.",
+    chatLead: "That sounds like a finance dispute.",
+    paragraphs: [
+      "The firm represents lenders and funders on the paper and in the fight: notes, MCA agreements, guaranties, UCC filings, and judgment enforcement.",
+      "A personal bankruptcy is not this practice.",
+    ],
+    handles: [
+      "Enforcing or defending a business loan or MCA",
+      "A guaranty or a confession of judgment",
+      "Security agreements and UCC filings",
+    ],
+    declines: [...declines, "Personal bankruptcy"],
+    documents: [
+      "The loan, MCA agreement, note, or guaranty",
+      "The demand, confession of judgment, or UCC filing",
+    ],
+    keywords: [
+      "mca",
+      "merchant cash",
+      "factoring",
+      "factor",
+      "promissory",
+      "guaranty",
+      "guarantee",
+      "confession of judgment",
+      "ucc",
+      "lender",
+      "funder",
+    ],
+    lawyerSlugs: ["shaya-gorkin", "levi-ainsworth"],
+  },
+  {
+    slug: "technology",
+    title: "Technology and SaaS",
+    blurb: "Software agreements, and the fight when a vendor keeps the data or the code.",
+    chatLead: "That sounds like a technology contract.",
+    paragraphs: [
+      "SaaS agreements, terms of service, data protection, and IP assignment, plus the dispute when the implementation fails.",
+    ],
+    handles: [
+      "A software vendor who stopped delivering",
+      "A developer who now claims to own the work",
+      "Terms of service and data terms",
+    ],
+    declines,
+    documents: [
+      "The agreement or statement of work",
+      "What was not delivered, or the claim that they own the work",
+    ],
+    keywords: [
+      "saas",
+      "software",
+      "developer",
+      "source code",
+      "our data",
+      "terms of service",
+      "the app",
+    ],
+    lawyerSlugs: ["levi-ainsworth", "shaya-gorkin"],
+  },
+  {
+    slug: "acquisitions",
+    title: "Mergers and acquisitions",
+    blurb: "Buying or selling a company.",
+    chatLead: "That sounds like a purchase or sale of a business.",
+    paragraphs: [
+      "Levi Ainsworth handles buyers and sellers through the transaction, from the letter of intent through the papers.",
+    ],
+    handles: [
+      "Buying a business",
+      "Selling a business",
+      "A letter of intent that needs a read before anyone signs",
+    ],
+    declines,
+    documents: ["The letter of intent or the offer", "The financials you were shown, if those are the dispute"],
+    keywords: [
+      "buying a business",
+      "buying the business",
+      "selling the business",
+      "sell my business",
+      "acquisition",
+      "letter of intent",
+      "merger",
+    ],
+    lawyerSlugs: ["levi-ainsworth"],
+  },
+  {
+    slug: "startup",
+    title: "Startup and venture counsel",
+    blurb: "Formation, co-founder terms, and a venture term sheet.",
+    chatLead: "That sounds like company formation or a venture deal.",
+    paragraphs: [
+      "Entity formation, co-founder agreements, and venture term sheets for businesses that want the paper right before there is a fight.",
+    ],
+    handles: ["Forming the company", "A co-founder agreement", "A venture term sheet"],
+    declines,
+    documents: ["The term sheet, co-founder email, or draft agreement"],
+    keywords: ["startup", "co-founder", "cofounder", "term sheet", "venture", "incorporate", "form the company"],
+    lawyerSlugs: ["levi-ainsworth"],
+  },
+  {
+    slug: "agreements",
+    title: "Contracts and transactions",
+    blurb: "Someone sent a stack of pages and you need to know what you would be signing.",
+    chatLead: "That sounds like a contract to review before anyone signs.",
+    paragraphs: [
+      "Drafting and review of the agreements the business actually lives on. The firm describes the transactional work as the cheaper path, before a dispute exists.",
+    ],
+    handles: [
+      "Review of a contract you were asked to sign",
+      "An operating agreement or buy-sell before it is needed",
+      "A deal that should be written down",
+    ],
+    declines,
+    documents: ["The draft you were asked to sign"],
+    keywords: ["review this", "forty pages", "the draft", "asked to sign", "buy-sell", "buy sell"],
+    lawyerSlugs: ["levi-ainsworth"],
+  },
+  {
+    slug: "counsel",
+    title: "Outside general counsel",
+    blurb: "Legal questions keep coming up and the company has nobody to call.",
+    chatLead: "That sounds like ongoing counsel, not one lawsuit.",
+    paragraphs: [
+      "Ongoing advice for a business that does not have an in-house lawyer. Most of the firm's clients are between two and a hundred people.",
+    ],
+    handles: [
+      "A company that needs a lawyer on call",
+      "Employment paperwork for the business, as the employer",
+      "Questions that are not a lawsuit yet",
+    ],
+    declines,
+    documents: ["The contract or question in front of you, if there is one"],
+    keywords: ["outside counsel", "general counsel", "on call", "nobody to call", "monthly counsel"],
+    lawyerSlugs: ["levi-ainsworth"],
+  },
+  {
+    slug: "arbitration",
+    title: "Arbitration and mediation",
+    blurb: "The contract sends the fight to arbitration, or both sides are willing to mediate.",
+    chatLead: "That sounds like arbitration or mediation.",
+    paragraphs: [
+      "The firm represents clients in binding arbitration and in mediation when a courtroom is the wrong first step.",
+    ],
+    handles: ["A demand for arbitration", "A mediation the contract requires", "A clause that keeps the case out of court"],
+    declines,
+    documents: ["The clause that requires arbitration or mediation", "The demand, if one was filed"],
+    keywords: ["arbitration", "arbitrator", "mediation", "mediator"],
+    lawyerSlugs: ["shaya-gorkin", "levi-ainsworth"],
+  },
+  {
+    slug: "emergency",
+    title: "Emergency relief",
+    blurb: "Money is moving, or a paper has to be answered in days.",
+    chatLead: "That sounds time-sensitive.",
+    paragraphs: [
+      "Restraining orders, injunctions, and answer deadlines. The firm asks you to say so on the first contact, and will say if the timeline is realistic.",
+    ],
+    handles: [
+      "A temporary restraining order or an injunction",
+      "An answer that is due this week",
+      "Money that has to be stopped from moving",
+    ],
+    declines,
+    documents: ["The papers that were served", "The date a response is due"],
+    keywords: [
+      "injunction",
+      "restraining order",
+      "temporary restraining",
+      "money is moving",
+      "freeze the account",
+      "answer is due",
+      "answer due",
+      "served yesterday",
+    ],
+    lawyerSlugs: ["shaya-gorkin"],
   },
 ];
 
+export const unsureMatter: Practice = {
+  slug: "unsure",
+  title: "Not sure what to call it",
+  blurb: "Describe what happened. The lawyers will say what it is, or that it is nothing.",
+  chatLead: "The lawyers can name this on the free evaluation. I won't guess the claim.",
+  paragraphs: [],
+  handles: [],
+  declines,
+  documents: ["Whatever you were served, or the draft you were asked to sign"],
+  keywords: [],
+  lawyerSlugs: ["shaya-gorkin", "levi-ainsworth"],
+};
+
 export const attorneys: Attorney[] = [
   {
-    slug: "helen-calder",
-    name: "Helen Calder",
-    role: "Partner",
-    focus: "Employment and closely held business disputes",
-    admissions: "Rhode Island and Massachusetts",
-    education: "Brown University, 1998. University of Connecticut School of Law, 2003.",
-    languages: ["English"],
-    paragraphs: [
-      "Helen tries cases and reads the contract before she talks about it. She started at a large firm in Boston and left to represent people who needed a lawyer, not a committee.",
-      "She handles firings, discrimination claims, and the fights that break out when a small company splits. If the file is an employment matter or a business divorce, she is usually the right first call.",
-    ],
-    practiceSlugs: ["employment", "business"],
-  },
-  {
-    slug: "owen-wren",
-    name: "Owen Wren",
-    role: "Partner",
-    focus: "Estates and residential real estate",
-    admissions: "Rhode Island",
-    education: "Bowdoin College, 2001. Boston College Law School, 2006.",
-    languages: ["English"],
-    paragraphs: [
-      "Owen drafts the will, then stays on to probate it. He also sits with buyers the week before a Rhode Island closing when the title looks uneven.",
-      "Clients usually meet him with a house, a parent’s estate, or both. He will tell you on the first call if the work is really a tax problem we don’t take.",
-    ],
-    practiceSlugs: ["estates", "closings"],
-  },
-  {
-    slug: "amira-solano",
-    name: "Amira Solano",
-    role: "Counsel",
-    focus: "Business disputes",
-    admissions: "Rhode Island, Massachusetts, and New York",
+    slug: "levi-ainsworth",
+    name: "Levi Ainsworth",
+    role: "Founding partner",
+    focus: "Transactions, outside counsel, startups, and acquisitions",
+    admissions: "New York. U.S. District Court for the Southern District of New York.",
     education:
-      "University of Puerto Rico, 2005. Northeastern University School of Law, 2010.",
-    languages: ["English", "Spanish"],
+      "Bachelor of Laws, Victoria University Law School, 2015. Certificate in mediation and dispute resolution, Humboldt University, Berlin.",
+    languages: ["English"],
     paragraphs: [
-      "Amira handles the fight after a partnership breaks: the unpaid invoice, the operating agreement nobody followed, the buyout that stalled.",
-      "She is the person to ask for if you want the consultation in Spanish. Say so when you leave a message and the desk will mark it.",
+      "Levi heads the corporate and commercial transactions work: day-to-day counsel, partnerships, formation, finance documents, and buying or selling a company.",
+      "The firm says he is the lawyer to ask when the question is the paper, not a lawsuit that has already been filed.",
     ],
-    practiceSlugs: ["business"],
+    practiceSlugs: ["partnership", "finance", "technology", "acquisitions", "startup", "agreements", "counsel", "arbitration"],
   },
   {
-    slug: "theo-park",
-    name: "Theo Park",
+    slug: "shaya-gorkin",
+    name: "Shaya Gorkin",
+    role: "Founding partner",
+    focus: "Commercial litigation, property disputes, and finance fights",
+    admissions:
+      "New York and New Jersey. Southern District of New York and Eastern District of New York.",
+    education: "J.D., Benjamin N. Cardozo School of Law, 2017. B.A., Rabbinical College of America, 2010.",
+    languages: ["English"],
+    paragraphs: [
+      "Shaya heads the litigation practice: breach of contract, property disputes, partnership breakups, alternative finance, factoring, and judgment enforcement.",
+      "If a complaint has been filed, or someone has to be sued, his name is the one the desk puts on the file.",
+    ],
+    practiceSlugs: ["contract", "partnership", "real-estate", "foreclosure", "commercial", "finance", "technology", "arbitration", "emergency"],
+  },
+  {
+    slug: "yehuda-morgenstern",
+    name: "Yehuda C. Morgenstern",
     role: "Associate",
-    focus: "Employment, and documents on closings",
-    admissions: "Rhode Island",
+    focus: "Complex commercial litigation",
+    admissions: "New York. Eastern District of New York. U.S. Court of Appeals for the Second Circuit.",
     education:
-      "University of Michigan, 2016. Roger Williams University School of Law, 2021.",
+      "J.D., Fordham University School of Law, 2012. Talmudic Law, Beth Midrash Govoah, 2005.",
     languages: ["English"],
     paragraphs: [
-      "Theo drafts the demand, builds the timeline, and is usually the first person to read what you send in on an employment file.",
-      "On closings, he reviews the purchase and sale agreement and the title commitment before Owen Wren talks with you about what they mean.",
+      "Yehuda is an associate in the litigation department. Before this firm he worked at commercial litigation boutiques, in state and federal court and before the Securities and Exchange Commission.",
+      "He was an editor of the Fordham Comparative Law Journal and interned for a judge of the Supreme Court of Kings County. Before law school he was a chaplain in New York State correctional facilities.",
     ],
-    practiceSlugs: ["employment", "closings"],
+    practiceSlugs: ["contract", "commercial"],
   },
 ];
 
@@ -226,21 +481,24 @@ export function getPractice(slug: string): Practice | undefined {
   return practices.find((practice) => practice.slug === slug);
 }
 
+export function getMatter(slug: string): Practice | undefined {
+  if (slug === unsureMatter.slug) return unsureMatter;
+  return getPractice(slug);
+}
+
 export function getAttorney(slug: string): Attorney | undefined {
   return attorneys.find((attorney) => attorney.slug === slug);
 }
 
 export function attorneysFor(practiceSlug: string): Attorney[] {
-  return attorneys.filter((attorney) =>
-    attorney.practiceSlugs.includes(practiceSlug),
-  );
+  return attorneys.filter((attorney) => attorney.practiceSlugs.includes(practiceSlug));
 }
 
 export function lawyerNames(slugs: string[]): string {
   const names = slugs
     .map((slug) => getAttorney(slug)?.name)
     .filter((name): name is string => Boolean(name));
-  if (names.length === 0) return "the lawyers here";
+  if (names.length === 0) return "the lawyers";
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;

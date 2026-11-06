@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { XIcon } from "lucide-react";
+import { FileTray } from "@/components/file-tray";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -28,8 +29,8 @@ type DeskMessage = {
   cards?: ChatCard[];
 };
 
-const SITE_STORAGE_KEY = "calder-wren-desk";
-const EMBED_STORAGE_KEY = "calder-wren-embed";
+const SITE_STORAGE_KEY = "ag-desk";
+const EMBED_STORAGE_KEY = "ag-desk-embed";
 
 function storageKey() {
   if (typeof window === "undefined") return SITE_STORAGE_KEY;
@@ -265,7 +266,7 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
           </li>
         ))}
       </ol>
-      {pending && <p className="mt-4 text-sm text-muted-foreground">Wren is writing…</p>}
+      {pending && <p className="mt-4 text-sm text-muted-foreground">One moment…</p>}
     </div>
   );
 
@@ -295,6 +296,9 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
         void send(draft);
       }}
     >
+      {(intake.phase === "documents" || intake.phase === "confirm" || intake.phase === "saved") && (
+        <FileTray draftId={intake.draftId} />
+      )}
       {error && (
         <p role="alert" className="mb-2 text-sm text-destructive">
           {error}
@@ -336,9 +340,9 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
   );
 
   const kicker = (
-    <p className="text-[0.68rem] tracking-[0.18em] text-primary uppercase">Calder & Wren</p>
+    <p className="text-[0.68rem] tracking-[0.18em] text-primary uppercase">Ainsworth Gorkin</p>
   );
-  const disclaimer = "Wren answers from the firm's own facts. Not legal advice.";
+  const disclaimer = "Qualifies the matter and collects the papers. Not legal advice.";
 
   if (variant === "embed") {
     return (
@@ -420,7 +424,7 @@ function MessageView({ message, newTab }: { message: DeskMessage; newTab?: boole
 
   return (
     <div className="mr-6 border-l-2 border-primary pl-3">
-      <p className="text-[0.68rem] tracking-[0.16em] text-primary uppercase">Wren</p>
+      <p className="text-[0.68rem] tracking-[0.16em] text-primary uppercase">Desk</p>
       <div className="mt-1 space-y-2 text-sm leading-6">
         {paragraphs.map((paragraph, index) => (
           <p key={index} className="whitespace-pre-wrap">
@@ -491,22 +495,32 @@ function CardView({ card, newTab }: { card: ChatCard; newTab?: boolean }) {
 
 function placeholderFor(phase: IntakeDraft["phase"]): string {
   switch (phase) {
+    case "company":
+      return "Company name, or say it's in your name";
+    case "role":
+      return "Owner, partner, lender…";
     case "name":
       return "First and last name";
     case "email":
       return "Email address";
     case "phone":
       return "Phone number, or skip";
+    case "opponent":
+      return "Who is on the other side?";
+    case "place":
+      return "New York, New Jersey, or somewhere else";
+    case "deadline":
+      return "A date, or none";
+    case "stake":
+      return "Money, a property, or the company";
     case "summary":
-      return "What happened, in a sentence or two";
-    case "timing":
-      return "Today, this week, next week…";
-    case "contact":
-      return "Call or email";
+      return "What happened, in a few sentences";
+    case "documents":
+      return "They're attached, or I don't have them";
     case "confirm":
       return "Yes, or say what to change";
     default:
-      return "Ask about the firm";
+      return "What happened at the business?";
   }
 }
 

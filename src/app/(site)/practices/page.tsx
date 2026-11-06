@@ -4,7 +4,7 @@ import { firm, lawyerNames, practices } from "@/lib/firm";
 
 export const metadata: Metadata = {
   title: "Practices",
-  description: "Employment, business disputes, estates, and Rhode Island home closings.",
+  description: "Commercial litigation, contracts, finance, and counsel for New York and New Jersey businesses.",
 };
 
 export default function PracticesPage() {

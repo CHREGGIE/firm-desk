@@ -1,4 +1,4 @@
-/* Calder & Wren desk loader.
+/* Ainsworth Gorkin desk loader.
    Squarespace pastes a script tag that points here. This file stays
    dependency-free so the host page does not need React or Tailwind.
    The panel is an iframe on this app's origin. Chat requests never
@@ -19,7 +19,7 @@
 
   if (!script || !script.src || script.src.indexOf("/widget.js") === -1) {
     console.warn(
-      "Calder & Wren desk: paste the script tag from the install page. Copying this file into Squarespace will not work.",
+      "Ainsworth Gorkin desk: paste the script tag from the install page. Copying this file into Squarespace will not work.",
     );
     return;
   }
