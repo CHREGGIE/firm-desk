@@ -57,6 +57,11 @@ export function SiteFooter() {
                 Request a consultation
               </Link>
             </li>
+            <li>
+              <Link className="underline decoration-border underline-offset-4" href="/squarespace">
+                Add the desk to Squarespace
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

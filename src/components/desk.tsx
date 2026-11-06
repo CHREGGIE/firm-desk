@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -27,7 +28,15 @@ type DeskMessage = {
   cards?: ChatCard[];
 };
 
-const STORAGE_KEY = "calder-wren-desk";
+const SITE_STORAGE_KEY = "calder-wren-desk";
+const EMBED_STORAGE_KEY = "calder-wren-embed";
+
+function storageKey() {
+  if (typeof window === "undefined") return SITE_STORAGE_KEY;
+  return window.location.pathname.startsWith("/embed")
+    ? EMBED_STORAGE_KEY
+    : SITE_STORAGE_KEY;
+}
 
 type DeskSession = {
   messages: DeskMessage[];
@@ -42,6 +51,7 @@ const serverSession: DeskSession = {
 };
 
 const listeners = new Set<() => void>();
+let cachedKey: string | null = null;
 let cachedRaw: string | null = null;
 let cachedSession: DeskSession = serverSession;
 
@@ -51,16 +61,20 @@ function subscribe(onStoreChange: () => void) {
 }
 
 function getSession(): DeskSession {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
-  if (raw === cachedRaw) return cachedSession;
+  const key = storageKey();
+  const raw = sessionStorage.getItem(key);
+  if (key === cachedKey && raw === cachedRaw) return cachedSession;
+  cachedKey = key;
   cachedRaw = raw;
   cachedSession = raw ? parseSession(raw) : serverSession;
   return cachedSession;
 }
 
 function writeSession(next: DeskSession) {
+  const key = storageKey();
   const raw = JSON.stringify(next);
-  sessionStorage.setItem(STORAGE_KEY, raw);
+  sessionStorage.setItem(key, raw);
+  cachedKey = key;
   cachedRaw = raw;
   cachedSession = next;
   for (const listener of listeners) listener();
@@ -92,10 +106,21 @@ function parseSession(raw: string): DeskSession {
   }
 }
 
-export function Desk() {
+const DESK_MESSAGE = "calder-wren-desk";
+
+export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
   const session = useSyncExternalStore(subscribe, getSession, () => serverSession);
   const { messages, intake, suggestions } = session;
   const [open, setOpen] = useState(false);
+  const shown = variant === "embed" || open;
+  const showWidgetClose = useSyncExternalStore(
+    () => () => {},
+    () =>
+      variant === "embed" &&
+      new URLSearchParams(window.location.search).get("widget") === "1" &&
+      window.parent !== window,
+    () => false,
+  );
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -103,7 +128,7 @@ export function Desk() {
   const lockRef = useRef(false);
   const sendRef = useRef<(text: string) => void>(() => {});
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     sendRef.current = (text: string) => {
@@ -122,15 +147,40 @@ export function Desk() {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 60);
-    return () => window.clearTimeout(timer);
-  }, [open]);
+    if (variant !== "embed") return;
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window.parent) return;
+      const data = event.data as { source?: string; type?: string } | null;
+      if (!data || data.source !== DESK_MESSAGE || data.type !== "focus") return;
+      inputRef.current?.focus();
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [variant]);
 
   useEffect(() => {
-    if (!open) return;
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, pending, open]);
+    if (!showWidgetClose) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      window.parent.postMessage({ source: DESK_MESSAGE, type: "close" }, "*");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showWidgetClose]);
+
+  useEffect(() => {
+    if (!shown) return;
+    if (variant === "embed" && window.parent !== window) return;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 60);
+    return () => window.clearTimeout(timer);
+  }, [shown, variant]);
+
+  useEffect(() => {
+    if (!shown) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    scroller.scrollTop = scroller.scrollHeight;
+  }, [messages, pending, shown]);
 
   async function send(text: string) {
     const trimmed = text.trim();
@@ -202,6 +252,125 @@ export function Desk() {
     setError("");
   }
 
+  const transcript = (
+    <div
+      ref={scrollerRef}
+      className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+      aria-live="polite"
+    >
+      <ol className="space-y-4">
+        {messages.map((message) => (
+          <li key={message.id}>
+            <MessageView message={message} newTab={variant === "embed"} />
+          </li>
+        ))}
+      </ol>
+      {pending && <p className="mt-4 text-sm text-muted-foreground">Wren is writing…</p>}
+    </div>
+  );
+
+  const suggestionRow =
+    suggestions.length > 0 ? (
+      <div className="flex shrink-0 flex-wrap gap-2 border-t border-border px-4 py-3">
+        {suggestions.map((suggestion) => (
+          <Button
+            key={suggestion}
+            type="button"
+            variant="outline"
+            className="h-8 bg-card"
+            disabled={pending}
+            onClick={() => void send(suggestion)}
+          >
+            {suggestion}
+          </Button>
+        ))}
+      </div>
+    ) : null;
+
+  const composer = (
+    <form
+      className="shrink-0 border-t border-border bg-background px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void send(draft);
+      }}
+    >
+      {error && (
+        <p role="alert" className="mb-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex items-end gap-2">
+        <label className="sr-only" htmlFor="desk-message">
+          Message to the desk
+        </label>
+        <Textarea
+          ref={inputRef}
+          id="desk-message"
+          name="desk-message"
+          value={draft}
+          rows={2}
+          maxLength={2000}
+          placeholder={placeholderFor(intake.phase)}
+          disabled={pending}
+          className="max-h-32 min-h-12 flex-1 bg-card"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              void send(draft);
+            }
+          }}
+        />
+        <Button type="submit" className="h-11 px-4" disabled={pending || draft.trim().length === 0}>
+          Send
+        </Button>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>Enter to send. Shift+Enter for a new line.</span>
+        <button type="button" className="underline underline-offset-4" onClick={startOver}>
+          Start over
+        </button>
+      </div>
+    </form>
+  );
+
+  const kicker = (
+    <p className="text-[0.68rem] tracking-[0.18em] text-primary uppercase">Calder & Wren</p>
+  );
+  const disclaimer = "Wren answers from the firm's own facts. Not legal advice.";
+
+  if (variant === "embed") {
+    return (
+      <section className="flex min-h-0 flex-1 flex-col bg-background" aria-label="The desk">
+        <header
+          className={`relative shrink-0 border-b border-border bg-card py-4 pl-4 ${showWidgetClose ? "pr-14" : "pr-4"}`}
+        >
+          {kicker}
+          <h1 className="font-heading text-2xl text-foreground">The desk</h1>
+          <p className="text-sm text-muted-foreground">{disclaimer}</p>
+          {showWidgetClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-3 right-3"
+              aria-label="Close"
+              onClick={() =>
+                window.parent.postMessage({ source: DESK_MESSAGE, type: "close" }, "*")
+              }
+            >
+              <XIcon />
+            </Button>
+          )}
+        </header>
+        {transcript}
+        {suggestionRow}
+        {composer}
+      </section>
+    );
+  }
+
   return (
     <>
       {!open && (
@@ -222,102 +391,20 @@ export function Desk() {
           className="w-full gap-0 overflow-hidden p-0 data-[side=right]:w-full data-[side=right]:sm:w-[26rem] data-[side=right]:sm:max-w-[26rem]"
         >
           <SheetHeader className="shrink-0 border-b border-border bg-card pr-12">
-            <p className="text-[0.68rem] tracking-[0.18em] text-primary uppercase">
-              Calder & Wren
-            </p>
+            {kicker}
             <SheetTitle className="font-heading text-2xl">The desk</SheetTitle>
-            <SheetDescription>
-              Wren answers from the firm&apos;s own facts. Not legal advice.
-            </SheetDescription>
+            <SheetDescription>{disclaimer}</SheetDescription>
           </SheetHeader>
-          <div
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
-            aria-live="polite"
-          >
-            <ol className="space-y-4">
-              {messages.map((message) => (
-                <li key={message.id}>
-                  <MessageView message={message} />
-                </li>
-              ))}
-            </ol>
-            {pending && (
-              <p className="mt-4 text-sm text-muted-foreground">Wren is writing…</p>
-            )}
-            <div ref={endRef} />
-          </div>
-          {suggestions.length > 0 && (
-            <div className="flex shrink-0 flex-wrap gap-2 border-t border-border px-4 py-3">
-              {suggestions.map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  type="button"
-                  variant="outline"
-                  className="h-8 bg-card"
-                  disabled={pending}
-                  onClick={() => void send(suggestion)}
-                >
-                  {suggestion}
-                </Button>
-              ))}
-            </div>
-          )}
-          <form
-            className="shrink-0 border-t border-border bg-background p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(draft);
-            }}
-          >
-            {error && (
-              <p role="alert" className="mb-2 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <div className="flex items-end gap-2">
-              <label className="sr-only" htmlFor="desk-message">
-                Message to the desk
-              </label>
-              <Textarea
-                ref={inputRef}
-                id="desk-message"
-                name="desk-message"
-                value={draft}
-                rows={2}
-                maxLength={2000}
-                placeholder={placeholderFor(intake.phase)}
-                disabled={pending}
-                className="max-h-32 min-h-12 flex-1 bg-card"
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void send(draft);
-                  }
-                }}
-              />
-              <Button
-                type="submit"
-                className="h-11 px-4"
-                disabled={pending || draft.trim().length === 0}
-              >
-                Send
-              </Button>
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>Enter to send. Shift+Enter for a new line.</span>
-              <button type="button" className="underline underline-offset-4" onClick={startOver}>
-                Start over
-              </button>
-            </div>
-          </form>
+          {transcript}
+          {suggestionRow}
+          {composer}
         </SheetContent>
       </Sheet>
     </>
   );
 }
 
-function MessageView({ message }: { message: DeskMessage }) {
+function MessageView({ message, newTab }: { message: DeskMessage; newTab?: boolean }) {
   const paragraphs = message.text.split("\n\n");
   if (message.role === "visitor") {
     return (
@@ -342,13 +429,13 @@ function MessageView({ message }: { message: DeskMessage }) {
         ))}
       </div>
       {message.cards?.map((card) => (
-        <CardView key={cardKey(card)} card={card} />
+        <CardView key={cardKey(card)} card={card} newTab={newTab} />
       ))}
     </div>
   );
 }
 
-function CardView({ card }: { card: ChatCard }) {
+function CardView({ card, newTab }: { card: ChatCard; newTab?: boolean }) {
   if (card.kind === "confirmation") {
     return (
       <div className="mt-3 border border-primary/30 bg-primary/5 px-3 py-3">
@@ -378,13 +465,26 @@ function CardView({ card }: { card: ChatCard }) {
   const title = card.kind === "practice" ? card.title : card.name;
   const detail = card.kind === "practice" ? card.blurb : `${card.role} · ${card.focus}`;
 
-  return (
-    <Link
-      href={href}
-      className="mt-3 block border border-border bg-card px-3 py-3 transition-colors hover:border-primary"
-    >
+  const className =
+    "mt-3 block border border-border bg-card px-3 py-3 transition-colors hover:border-primary";
+  const body = (
+    <>
       <p className="font-heading text-lg leading-tight">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
+    </>
+  );
+
+  if (newTab) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {body}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {body}
     </Link>
   );
 }

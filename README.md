@@ -10,6 +10,18 @@ The desk answers only from the firm profile in `src/lib/firm.ts`. It does not ca
 - **Request a consultation** is the same intake as a form, if someone would rather not chat.
 - A filed message gets a reference like `CW-7K2Q`. The firm replies within one business day in the story of the site. Nothing here creates an attorney-client relationship.
 
+## Squarespace
+
+The firm site can stay on Squarespace. This app is the desk, and Squarespace only loads it.
+
+Open `/squarespace` on the published app and copy the snippet. Paste it into **Footer code injection** (Pages → Custom Code → Code Injection). That needs a Core, Plus, or Advanced plan, or a legacy plan that still includes code injection. Basic will not run it.
+
+The button is drawn by `public/widget.js`. The conversation itself is `/embed`, an iframe on this app, so Squarespace’s CSS cannot restyle the chat and the page does not call the chat API itself. Squarespace blocks that kind of browser request.
+
+A Code block on a single page can hold the iframe snippet from the same install page. Do not use an Embed block. Check the result in a private window. The Squarespace editor often hides injected code while you are logged in.
+
+Practice and lawyer links inside an embedded answer open in a new tab, so the chat stays open on the Squarespace page.
+
 Calder & Wren is sample content, not a law office. The phone number is fictional. The Rhode Island Bar referral number is real, and the desk uses it only when the firm does not take the work.
 
 ## Make it your firm
