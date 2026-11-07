@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { createBlobLead, listBlobLeads, readBlobFile, saveBlobFile, usesBlobStore } from "./blob-leads";
 import { containsSensitive, isUrgentDeadline } from "./chat";
 import { sql } from "./db";
 import { getMatter } from "./firm";
@@ -80,7 +81,12 @@ export function validateLead(
   return { ok: true, value: input };
 }
 
+function durableBlob(): boolean {
+  return usesBlobStore() && (process.env.DATABASE_URL?.trim() ?? "") === "";
+}
+
 export async function createLead(input: LeadInput): Promise<{ reference: string; status: "urgent" | "ready" | "thin" }> {
+  if (durableBlob()) return createBlobLead(input, leadStatus(input));
   const status = leadStatus(input);
   let lastError: unknown;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -132,6 +138,7 @@ export async function createLead(input: LeadInput): Promise<{ reference: string;
 }
 
 export async function listLeads(): Promise<LeadRow[]> {
+  if (durableBlob()) return listBlobLeads();
   const rows = await sql<{
     id: string;
     reference: string;
@@ -195,6 +202,7 @@ export async function saveDraftFile(input: {
   contentType: string;
   bytes: Buffer;
 }): Promise<{ id: string; filename: string; size: number }> {
+  if (durableBlob()) return saveBlobFile(input);
   const existing = await sql<{ count: string }>(
     `select count(*)::text as count from lead_files where draft_id = $1`,
     [input.draftId],
@@ -213,6 +221,7 @@ export async function saveDraftFile(input: {
 export async function readLeadFile(
   id: string,
 ): Promise<{ filename: string; contentType: string; bytes: Uint8Array } | null> {
+  if (durableBlob()) return readBlobFile(id);
   const rows = await sql<{ filename: string; content_type: string; bytes: Uint8Array }>(
     `select filename, content_type, bytes from lead_files where id = $1 and lead_id is not null`,
     [id],

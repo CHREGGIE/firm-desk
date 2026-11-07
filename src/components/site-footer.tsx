@@ -63,6 +63,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link className="underline decoration-border underline-offset-4" href="/check">
+                Check the flow
+              </Link>
+            </li>
+            <li>
               <Link className="underline decoration-border underline-offset-4" href="/review">
                 Lawyer review
               </Link>

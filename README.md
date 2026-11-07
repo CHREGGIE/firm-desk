@@ -30,6 +30,19 @@ The phone, address, and practice list are taken from the firm's public site. The
 
 Edit `src/lib/firm.ts`. The pages and the chatbot both read that file: name, practices, lawyers, fees, hours, and offices. Restart the dev server after you change it.
 
+## Vercel
+
+This copy is meant to be deployed so a legal assistant can walk the intake and a lawyer can check the queue later. On Vercel the leads and papers are stored in a private Blob store. They stay after the assistant closes the tab. Locally, without that store, they still live in memory or in Postgres when `DATABASE_URL` is set.
+
+Set `REVIEW_PASSWORD` on the Vercel project for Production and Preview. The review page does not print that password. Share it with the assistant directly.
+
+```bash
+npx vercel
+npx vercel --prod
+```
+
+Then connect a private Blob store to the project. Vercel adds `BLOB_STORE_ID`. Redeploy after it is connected. Open `/check` for the script and `/review` for the packets.
+
 ## Run locally
 
 ```bash
@@ -48,7 +61,8 @@ npm run lint
 
 Leads and their files are stored in `leads` and `lead_files`.
 
-- With `DATABASE_URL`, the app uses Postgres. Publishing this app can attach a database for that.
-- Without `DATABASE_URL`, local development uses an in-memory database, so messages last only as long as that server process.
+- With `DATABASE_URL`, the app uses Postgres.
+- On Vercel, with a private Blob store and no `DATABASE_URL`, leads and papers stay in that store.
+- Without either, local development uses an in-memory database, so messages last only as long as that server process.
 
 There is no public inbox. The person who sent a file sees the reference. Lawyers read the queue at `/review`.

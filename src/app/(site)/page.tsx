@@ -34,6 +34,12 @@ export default function HomePage() {
               Request a consultation
             </Link>
           </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            <Link className="underline underline-offset-4" href="/check">
+              Check the flow
+            </Link>{" "}
+            is the script for the legal assistant. Filed leads stay in the lawyer queue.
+          </p>
           <dl className="mt-10 grid grid-cols-2 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">First look</dt>
