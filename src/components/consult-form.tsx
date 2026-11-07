@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,11 @@ function draftId() {
 }
 
 export function ConsultForm() {
-  const [id] = useState(draftId);
+  const idRef = useRef("");
+  function ensureId() {
+    if (!idRef.current) idRef.current = draftId();
+    return idRef.current;
+  }
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("Owner");
   const [name, setName] = useState("");
@@ -51,7 +55,7 @@ export function ConsultForm() {
     setFormError("");
     for (const file of Array.from(list)) {
       const body = new FormData();
-      body.set("draftId", id);
+      body.set("draftId", ensureId());
       body.set("file", file);
       const response = await fetch("/api/uploads", { method: "POST", body });
       const data = (await response.json().catch(() => null)) as { filename?: string; error?: string } | null;
@@ -87,7 +91,7 @@ export function ConsultForm() {
           stake,
           summary,
           docNote: files.length ? `Attached: ${files.join(", ")}` : "No papers attached on the form.",
-          draftId: id,
+          draftId: ensureId(),
           fax,
         }),
       });
