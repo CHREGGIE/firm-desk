@@ -279,7 +279,7 @@ function answerInfo(norm: string): ChatResult | null {
   }
   if (/\b(hours|are you open|when are you open|what time)\b/.test(norm)) {
     return say(
-      `The site doesn't publish office hours. Call ${firm.phone}. The firm says you speak with a lawyer, not a junior.`,
+      `The office is open ${firm.hours.map((row) => `${row.days}, ${row.hours}`).join(", and ")}. Call ${firm.phone}.`,
       ["Where is the office?"],
       emptyIntake(),
     );

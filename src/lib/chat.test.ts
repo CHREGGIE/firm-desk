@@ -39,7 +39,9 @@ describe("Ainsworth Gorkin desk", () => {
     assert.match(where.text, /11225/);
     assert.match(where.text, /212/);
     const hours = say([], emptyIntake(), "What are your hours?").result;
-    assert.match(hours.text, /doesn't publish/i);
+    assert.match(hours.text, /Monday to Thursday, 9:00 AM to 7:00 PM/);
+    assert.match(hours.text, /Friday, 9:00 AM to 4:00 PM/);
+    assert.doesNotMatch(hours.text, /junior/);
     assert.doesNotMatch(hours.text, /5:30/);
   });
 

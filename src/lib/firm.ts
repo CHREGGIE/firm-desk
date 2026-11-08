@@ -47,11 +47,10 @@ export const firm = {
   phoneHref: "tel:+12129130217",
   email: "info@ainsworthgorkin.com",
   emailHref: "mailto:info@ainsworthgorkin.com",
+  // From the firm's Brooklyn, Queens, and Manhattan pages (checked Nov 8, 2026).
   hours: [
-    {
-      days: "By phone",
-      hours: "Hours aren't published. Call, and a lawyer answers.",
-    },
+    { days: "Monday to Thursday", hours: "9:00 AM to 7:00 PM" },
+    { days: "Friday", hours: "9:00 AM to 4:00 PM" },
   ],
   consult: {
     feeLine:
