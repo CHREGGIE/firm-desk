@@ -113,8 +113,7 @@ function Report({ report }: { report: MetricsReport }) {
       <section className="mt-10">
         <h2 className="font-heading text-2xl">Last 7 days</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          This week: {report.week.opened} opens, {report.week.messaged} messages, {report.week.filed} files from those conversations
-          {report.week.conversion === null ? "." : `, ${percent(report.week.conversion)} conversion.`} Pale bars are opens. Dark bars are files, including the consult form and older files.
+          {`This week: ${report.week.opened} ${report.week.opened === 1 ? "open" : "opens"}, ${report.week.messaged} ${report.week.messaged === 1 ? "message" : "messages"}, ${report.week.filed} ${report.week.filed === 1 ? "file" : "files"} from those conversations${report.week.conversion === null ? "." : `, ${percent(report.week.conversion)} of them.`} Pale bars are opens. Dark bars are files, including the consult form and older files.`}
         </p>
         <div className="mt-4 flex h-36 items-end gap-1 sm:gap-2">
           {report.days.map((day) => (
