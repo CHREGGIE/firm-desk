@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  containsSensitive,
   emptyIntake,
   respond,
   type ChatTurn,
@@ -167,4 +168,100 @@ describe("Ainsworth Gorkin desk", () => {
     const good = inspectUpload("note.txt", Buffer.from("The contract is attached in spirit."));
     assert.equal(good.ok, true);
   });
+
+  describe("fixes from the November review", () => {
+    function walk(lines: string[], opener = story) {
+      let step = say([], emptyIntake(), opener);
+      for (const line of lines) step = say(step.history, step.intake, line);
+      return step;
+    }
+    const answers = [
+      "Northwind Supply LLC",
+      "Owner",
+      "Pat Doe",
+      "pat@exmaple.com",
+      "skip",
+      "Acme Corp",
+      "Brooklyn",
+      "none",
+      "$80,000",
+      "I don't have them",
+    ];
+
+    it("goes straight back to the packet after one answer is changed", () => {
+      let step = walk(answers);
+      assert.equal(step.intake.phase, "confirm");
+      step = say(step.history, step.intake, "No, change the email");
+      assert.equal(step.intake.phase, "email");
+      step = say(step.history, step.intake, "pat@example.com");
+      assert.equal(step.intake.phase, "confirm");
+      assert.equal(step.intake.email, "pat@example.com");
+      assert.equal(step.intake.opponent, "Acme Corp");
+      assert.match(step.result.text, /Reach: pat@example\.com/);
+      step = say(step.history, step.intake, "Yes, send it");
+      assert.equal(step.result.readyToSave, true);
+    });
+
+    it("lets the visitor change the name, role, place, or stake", () => {
+      for (const [ask, phase, answer, field, value] of [
+        ["change my name", "name", "Patricia Doe", "name", "Patricia Doe"],
+        ["fix my role", "role", "Partner", "role", "Partner"],
+        ["the state is wrong", "place", "New Jersey", "place", "New Jersey"],
+        ["change the amount at stake", "stake", "$95,000", "stake", "$95,000"],
+      ] as const) {
+        let step = walk(answers);
+        step = say(step.history, step.intake, ask);
+        assert.equal(step.intake.phase, phase, ask);
+        step = say(step.history, step.intake, answer);
+        assert.equal(step.intake.phase, "confirm", ask);
+        assert.equal(step.intake[field], value, ask);
+      }
+    });
+
+    it("does not file a yes that also asks for a change", () => {
+      let step = walk(answers);
+      step = say(step.history, step.intake, "Yes, but change the email first");
+      assert.equal(step.result.readyToSave, false);
+      assert.equal(step.intake.phase, "email");
+    });
+
+    it("answers a question at the packet without changing a field", () => {
+      let step = walk(answers);
+      step = say(step.history, step.intake, "Where is the office?");
+      assert.equal(step.intake.phase, "confirm");
+      assert.match(step.result.text, /President Street/);
+      assert.equal(step.result.readyToSave, false);
+    });
+
+    it("keeps an answer that starts like a question", () => {
+      let step = walk(answers.slice(0, 8), "A customer stopped paying");
+      step = say(step.history, step.intake, "How much? About $40,000 in unpaid invoices");
+      assert.equal(step.intake.stake, "How much? About $40,000 in unpaid invoices");
+      assert.equal(step.intake.phase, "summary");
+      step = say(step.history, step.intake, "What happened is they took delivery at the agreed rate and then refused to pay.");
+      assert.equal(step.intake.phase, "documents");
+      assert.match(step.intake.summary, /refused to pay/);
+    });
+
+    it("asks what happened instead of reusing the deadline answer", () => {
+      const step = walk(
+        [...answers.slice(0, 7), "Our answer to the complaint is due November 30 and a hearing is set", "$40,000"],
+        "A customer stopped paying",
+      );
+      assert.equal(step.intake.phase, "summary");
+      assert.equal(step.intake.summary, "");
+    });
+
+    it("refuses card, account, and Social Security numbers but not invoices and dates", () => {
+      assert.equal(containsSensitive("Invoice 4471 dated 03/15/2026 for $40,000"), false);
+      assert.equal(containsSensitive("Call 212-555-0100 ext 1234"), false);
+      assert.equal(containsSensitive("212-555-0100 or 917-555-0199"), false);
+      assert.equal(containsSensitive("We billed $12,500 on 04/02/2026 and $40,000 on 05/01/2026"), false);
+      assert.equal(containsSensitive("card 4242 4242 4242 4242"), true);
+      assert.equal(containsSensitive("4111-1111-1111-1111"), true);
+      assert.equal(containsSensitive("123-45-6789"), true);
+      assert.equal(containsSensitive("my account number is 00123456789"), true);
+    });
+  });
 });
+

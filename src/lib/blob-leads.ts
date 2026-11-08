@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { get, list, put } from "@vercel/blob";
 import type { LeadInput, LeadRow } from "./leads";
+import { FILED_ALREADY, UploadRefused } from "./upload-errors";
 
 const access = "private" as const;
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -50,7 +51,17 @@ export async function createBlobLead(
       if (isConflict(error)) continue;
       throw error;
     }
-    if (input.draftId) record.files = await attachDraft(input.draftId, record.id);
+    if (input.draftId) {
+      // Marks the draft as filed, so a later upload to it is refused instead of
+      // landing where no lawyer will ever see it.
+      await put(`drafts/${input.draftId}/_filed`, reference, {
+        access,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: "text/plain",
+      });
+      record.files = await attachDraft(input.draftId, record.id);
+    }
     if (record.files.length > 0) await writeJson(`leads/${reference}.json`, record, true);
     return { reference, status };
   }
@@ -75,10 +86,10 @@ export async function saveBlobFile(input: {
   contentType: string;
   bytes: Buffer;
 }): Promise<{ id: string; filename: string; size: number }> {
-  const existing = (await listPathnames(`drafts/${input.draftId}/`)).filter((name) =>
-    name.endsWith(".json"),
-  );
-  if (existing.length >= 5) throw new Error("Five files is the limit on one lead.");
+  const names = await listPathnames(`drafts/${input.draftId}/`);
+  if (names.includes(`drafts/${input.draftId}/_filed`)) throw new UploadRefused(FILED_ALREADY);
+  const existing = names.filter((name) => name.endsWith(".json"));
+  if (existing.length >= 5) throw new UploadRefused("Five files is the limit on one lead.");
   const id = randomBytes(16).toString("hex");
   const meta: FileMeta = {
     id,

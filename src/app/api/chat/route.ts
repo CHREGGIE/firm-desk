@@ -118,18 +118,23 @@ function serverDraftId(value: string): string {
   }
 }
 
+// The desk only needs recent turns. A long conversation keeps its last 40
+// instead of being refused, which used to strand anyone who fixed an answer.
+const MAX_TURNS = 40;
+
 function parseMessages(value: unknown): ChatTurn[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 40) return null;
+  if (!Array.isArray(value) || value.length === 0 || value.length > 400) return null;
   const messages: ChatTurn[] = [];
-  for (const item of value) {
+  for (const item of value.slice(-MAX_TURNS)) {
     if (!item || typeof item !== "object") return null;
     const role = (item as { role?: unknown }).role;
     const text = (item as { text?: unknown }).text;
     if (role !== "visitor" && role !== "desk") return null;
     if (typeof text !== "string") return null;
     const trimmed = text.trim();
-    if (!trimmed || trimmed.length > 2000) return null;
-    messages.push({ role, text: trimmed });
+    if (!trimmed) return null;
+    if (role === "visitor" && trimmed.length > 2000) return null;
+    messages.push({ role, text: trimmed.slice(0, 4000) });
   }
   if (messages[messages.length - 1]?.role !== "visitor") return null;
   return messages;
@@ -157,6 +162,7 @@ function parseIntake(value: unknown): IntakeDraft {
     summary: clip(raw.summary, 1000),
     docNote: clip(raw.docNote, 1000),
     draftId: /^[a-f0-9]{24}$/.test(clip(raw.draftId, 64)) ? clip(raw.draftId, 64) : "",
+    editing: raw.editing === true,
   };
 }
 

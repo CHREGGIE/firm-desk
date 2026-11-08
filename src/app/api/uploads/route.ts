@@ -1,5 +1,6 @@
 import { clientIp, forbidden, mintDraftId, overLimit, sameOrigin, signedDraftId, slowDown } from "@/lib/guard";
 import { saveDraftFile } from "@/lib/leads";
+import { UploadRefused } from "@/lib/upload-errors";
 import { inspectUpload } from "@/lib/uploads";
 import { markDocuments, validVisitId } from "@/lib/visits";
 
@@ -54,11 +55,8 @@ export async function POST(request: Request) {
     }
     return Response.json({ ...saved, draftId });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
+    if (error instanceof UploadRefused) return Response.json({ error: error.message }, { status: 409 });
     console.error("file insert failed");
-    return Response.json(
-      { error: message.includes("limit") ? message : "The file didn't save. Try it again." },
-      { status: 500 },
-    );
+    return Response.json({ error: "The file didn't save. Try it again." }, { status: 500 });
   }
 }

@@ -36,6 +36,9 @@ export type IntakeDraft = {
   summary: string;
   docNote: string;
   draftId: string;
+  // Set while the visitor changes one answer from the packet. The next good
+  // answer goes straight back to the packet instead of walking every later step.
+  editing: boolean;
 };
 
 export type ChatCard =
@@ -78,6 +81,7 @@ export function emptyIntake(): IntakeDraft {
     summary: "",
     docNote: "",
     draftId: "",
+    editing: false,
   };
 }
 
@@ -130,57 +134,52 @@ function collect(history: ChatTurn[], intake: IntakeDraft, current: string, norm
   const next = { ...intake };
   if (next.phase === "company") {
     next.company = companyAnswer(current, norm);
-    next.phase = "role";
-    return ask(next, "What's your role there? Owner, partner, lender, manager, or something else.");
+    return move(next, "role", "What's your role there? Owner, partner, lender, manager, or something else.");
   }
   if (next.phase === "role") {
     next.role = clip(current, 80);
-    next.phase = "name";
-    return ask(next, "What's your first and last name?");
+    return move(next, "name", "What's your first and last name?");
   }
   if (next.phase === "name") {
     if (current.trim().length < 3) return ask(next, "I need a first and last name.");
     next.name = clip(current, 80);
-    next.phase = "email";
-    return ask(next, "What's the best email for the lawyers to use?");
+    return move(next, "email", "What's the best email for the lawyers to use?");
   }
   if (next.phase === "email") {
     if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(current.trim())) {
       return ask(next, "That email doesn't look right. Try it again.");
     }
     next.email = current.trim().toLowerCase();
-    next.phase = "phone";
-    return ask(next, "A phone number, or say skip.");
+    return move(next, "phone", "A phone number, or say skip.");
   }
   if (next.phase === "phone") {
-    if (!/^skip\b|^no\b|^none\b/.test(norm)) {
+    if (/^skip\b|^no\b|^none\b/.test(norm)) {
+      next.phone = "";
+    } else {
       const digits = current.replace(/\D/g, "");
       if (digits.length < 10) return ask(next, "That phone number looks short. Send 10 digits, or say skip.");
       next.phone = clip(current, 30);
     }
-    next.phase = "opponent";
-    return ask(next, "Who is on the other side? A person or a company. The lawyers need the name before they can check conflicts.");
+    return move(next, "opponent", "Who is on the other side? A person or a company. The lawyers need the name before they can check conflicts.");
   }
   if (next.phase === "opponent") {
     next.opponent = /don'?t know|not sure|unknown/.test(norm) ? "Unknown" : clip(current, 120);
-    next.phase = "place";
-    return ask(next, "Is this in New York, New Jersey, or somewhere else?");
+    return move(next, "place", "Is this in New York, New Jersey, or somewhere else?");
   }
   if (next.phase === "place") {
     next.place = placeAnswer(norm, current);
-    next.phase = "deadline";
-    return ask(next, "Is there a court date, a closing, or a deadline? If something is due this week, say when. If not, say none.");
+    return move(next, "deadline", "Is there a court date, a closing, or a deadline? If something is due this week, say when. If not, say none.");
   }
   if (next.phase === "deadline") {
     next.deadline = /^none\b|^no deadline|^no\b|^nothing\b/.test(norm) ? "None" : clip(current, 120);
-    next.phase = "stake";
-    return ask(next, "What's at stake, in one sentence? Money, a property, or the company.");
+    return move(next, "stake", "What's at stake, in one sentence? Money, a property, or the company.");
   }
   if (next.phase === "stake") {
     next.stake = clip(current, 200);
-    const earlier = pickSummary(history, current);
-    if (earlier) {
-      next.summary = earlier;
+    if (next.editing) return backToPacket(next);
+    // Only the visitor's opening story counts as the summary. Reusing a later
+    // answer picked up the deadline or the company name as "what happened".
+    if (next.summary) {
       next.phase = "documents";
       return ask(next, documentPrompt(next.matter));
     }
@@ -190,15 +189,28 @@ function collect(history: ChatTurn[], intake: IntakeDraft, current: string, norm
   if (next.phase === "summary") {
     if (current.trim().length < 15) return ask(next, "Add a little more. A few sentences is enough.");
     next.summary = clip(current, 1000);
-    next.phase = "documents";
-    return ask(next, documentPrompt(next.matter));
+    return move(next, "documents", documentPrompt(next.matter));
   }
   if (next.phase === "documents") {
     next.docNote = documentNote(norm, next.matter);
-    next.phase = "confirm";
-    return ask(next, packet(next), ["Yes, send it", "No, change the email"]);
+    return backToPacket(next);
   }
   if (next.phase === "confirm") {
+    const info = norm.endsWith("?") ? answerInfo(norm) : null;
+    if (info) {
+      return {
+        ...info,
+        intake: next,
+        text: `${info.text}\n\n${promptFor("confirm")}`,
+        suggestions: ["Yes, send it", "No, change the email"],
+      };
+    }
+    const back = fieldToChange(norm);
+    if (back && !/^(yes|yep|yeah)\W*$/.test(norm)) {
+      next.phase = back;
+      next.editing = true;
+      return ask(next, promptFor(back), back === "documents" ? ["I don't have them"] : ["Where is the office?"]);
+    }
     if (isYes(norm)) {
       return {
         text: packet(next),
@@ -208,17 +220,24 @@ function collect(history: ChatTurn[], intake: IntakeDraft, current: string, norm
         readyToSave: true,
       };
     }
-    const back = fieldToChange(norm);
-    if (back) {
-      next.phase = back;
-      return ask(next, promptFor(back));
-    }
     return ask(next, `I haven't sent it. Say yes to file it, or name what to change.\n\n${packet(next)}`, [
       "Yes, send it",
       "No, change the email",
     ]);
   }
   return answerFree(history, current, norm);
+}
+
+function move(next: IntakeDraft, phase: IntakePhase, prompt: string): ChatResult {
+  if (next.editing) return backToPacket(next);
+  next.phase = phase;
+  return ask(next, prompt);
+}
+
+function backToPacket(next: IntakeDraft): ChatResult {
+  next.editing = false;
+  next.phase = "confirm";
+  return ask(next, packet(next), ["Yes, send it", "No, change the email"]);
 }
 
 function answerFree(history: ChatTurn[], current: string, norm: string): ChatResult {
@@ -357,12 +376,17 @@ function placeAnswer(norm: string, current: string): string {
 }
 
 function fieldToChange(norm: string): IntakePhase | null {
-  if (/\bemail\b/.test(norm)) return "email";
-  if (/\bphone\b/.test(norm)) return "phone";
-  if (/\bcompany\b/.test(norm)) return "company";
+  if (/\b(e-?mail)\b/.test(norm)) return "email";
+  if (/\b(phone|number)\b/.test(norm)) return "phone";
+  if (/\b(company|business name)\b/.test(norm)) return "company";
   if (/\b(other side|opponent|against)\b/.test(norm)) return "opponent";
-  if (/\bdeadline|date|hearing\b/.test(norm)) return "deadline";
-  if (/\bsummary|what happened|facts\b/.test(norm)) return "summary";
+  if (/\b(my name|the name|name)\b/.test(norm)) return "name";
+  if (/\b(role|title|position)\b/.test(norm)) return "role";
+  if (/\b(place|state|where|location)\b/.test(norm)) return "place";
+  if (/\b(deadline|date|hearing|court)\b/.test(norm)) return "deadline";
+  if (/\b(at stake|stake|amount)\b/.test(norm)) return "stake";
+  if (/\b(summary|what happened|facts|story)\b/.test(norm)) return "summary";
+  if (/\b(papers|documents|docs|files)\b/.test(norm)) return "documents";
   return null;
 }
 
@@ -437,8 +461,11 @@ function shouldQualify(norm: string): boolean {
   return Boolean(bestMatter(norm));
 }
 
+const FREE_TEXT = new Set<IntakePhase>(["company", "role", "opponent", "stake", "summary"]);
+
 function isSideQuestion(norm: string, phase: IntakePhase): boolean {
   if (phase === "confirm" || phase === "documents") return false;
+  if (FREE_TEXT.has(phase) && !norm.endsWith("?")) return false;
   if (!isInfoShaped(norm) && !isAdvice(norm)) return false;
   if (bestMatter(norm) && phase === "company") return false;
   return Boolean(answerInfo(norm) || isAdvice(norm));
@@ -571,20 +598,18 @@ function deceptionText(): string {
   return "I can't help hide money, backdate a paper, or forge a document. If the dispute is real, describe it plainly and the lawyers can review it.";
 }
 
+// Looks at one run of digits at a time (digits joined only by single spaces or
+// dashes), so amounts, dates, and invoice numbers in the same sentence don't
+// add up to a fake card number. Two phone numbers in a row are 20 digits.
 export function containsSensitive(text: string): boolean {
-  const digits = text.replace(/\D/g, "");
   if (/\b\d{3}-\d{2}-\d{4}\b/.test(text)) return true;
-  if (digits.length >= 13 && digits.length <= 19) return true;
+  if (/\b(ssn|social security)\D{0,20}\d{9}\b/i.test(text)) return true;
+  if (/\b(account|acct|routing|card)\s*(number|no\.?|#)?\s*(is\s*)?:?\s*\d[\d -]{6,}/i.test(text)) return true;
+  for (const run of text.match(/\d(?:[ -]?\d)*/g) ?? []) {
+    const length = run.replace(/\D/g, "").length;
+    if (length >= 13 && length <= 19) return true;
+  }
   return false;
-}
-
-function pickSummary(history: ChatTurn[], current: string): string {
-  const earlier = history
-    .filter((turn) => turn.role === "visitor" && turn.text.trim() !== current.trim())
-    .map((turn) => turn.text.trim())
-    .filter(worthySummary)
-    .sort((a, b) => b.length - a.length);
-  return earlier[0] ? clip(earlier[0], 1000) : "";
 }
 
 function worthySummary(text: string): boolean {
