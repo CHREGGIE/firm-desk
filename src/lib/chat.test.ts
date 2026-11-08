@@ -263,5 +263,71 @@ describe("Ainsworth Gorkin desk", () => {
       assert.equal(containsSensitive("my account number is 00123456789"), true);
     });
   });
+
+  describe("routing and declines", () => {
+    function first(text: string) {
+      return say([], emptyIntake(), text).result;
+    }
+    const declined = (text: string) => /626-7373/.test(first(text).text);
+
+    it("sends contract review, NDAs, and buying or selling a company to Levi", () => {
+      for (const [text, slug] of [
+        ["I need a contract reviewed", "agreements"],
+        ["Can you review an NDA before I sign it?", "agreements"],
+        ["We want to buy a small business", "acquisitions"],
+        ["I want to sell my company", "acquisitions"],
+      ] as const) {
+        const result = first(text);
+        assert.equal(result.intake.matter, slug, text);
+        assert.match(result.text, /Levi Ainsworth/, text);
+      }
+    });
+
+    it("starts a litigation file for a lawsuit or a demand letter", () => {
+      for (const text of ["We got sued", "I got a demand letter", "A supplier sent us a cease and desist"]) {
+        const result = first(text);
+        assert.equal(result.intake.phase, "company", text);
+        assert.match(result.text, /Shaya Gorkin/, text);
+      }
+    });
+
+    it("keeps an owner pushed out of their own company", () => {
+      const result = first("I was fired as CEO by my co-founders and they froze me out of the company I own 40% of");
+      assert.equal(result.intake.matter, "partnership");
+      assert.equal(declined("My partners fired me from the LLC and stopped paying my distributions"), false);
+    });
+
+    it("does not decline on Visa, criminal, or malpractice alone", () => {
+      assert.equal(first("Our customer paid with a Visa card and then charged back $30,000 after taking the goods").intake.matter, "contract");
+      assert.equal(first("Our former partner committed criminal fraud and drained the company account").intake.matter, "partnership");
+      const malpractice = first("Our accounting firm's malpractice cost our company $200,000 in penalties");
+      assert.equal(malpractice.intake.phase, "company");
+      assert.doesNotMatch(malpractice.text, /free evaluation\. You describe/);
+    });
+
+    it("still declines the work the firm does not take", () => {
+      for (const text of [
+        "I was fired",
+        "My employer won't pay my overtime",
+        "I need a divorce lawyer",
+        "I was arrested last night",
+        "My work visa is expiring",
+        "I was in a car accident",
+        "Medical malpractice by my doctor",
+        "I need to file chapter 7",
+        "My landlord is evicting me from my apartment",
+      ]) {
+        assert.equal(declined(text), true, text);
+        assert.equal(first(text).intake.phase, "idle", text);
+      }
+    });
+
+    it("answers a fee question that is phrased as a sentence", () => {
+      const result = first("I want to know how much you charge for a first meeting");
+      assert.equal(result.intake.phase, "idle");
+      assert.match(result.text, /free evaluation/);
+      assert.doesNotMatch(result.text, /\$\d/);
+    });
+  });
 });
 

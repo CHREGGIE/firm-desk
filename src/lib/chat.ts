@@ -243,7 +243,11 @@ function backToPacket(next: IntakeDraft): ChatResult {
 function answerFree(history: ChatTurn[], current: string, norm: string): ChatResult {
   if (isOut(norm)) return say(declineText(norm), ["Where is the office?"], emptyIntake());
   const info = answerInfo(norm);
-  if (info && !shouldQualify(norm)) return info;
+  // A story ("our accountant's mistake cost us $200,000") is not a fee question
+  // just because it says "cost". A short message, a question, or one that
+  // speaks to the firm ("how much do you charge") still gets the info answer.
+  const story = worthySummary(current) && !/\b(you|your|the firm)\b/.test(norm);
+  if (info && !shouldQualify(norm) && !story) return info;
   if (isAdvice(norm) && !bestMatter(norm)) return adviceRefusal();
 
   const matter = bestMatter(norm) ?? (worthySummary(current) ? unsureMatter : undefined);
@@ -471,17 +475,39 @@ function isSideQuestion(norm: string, phase: IntakePhase): boolean {
   return Boolean(answerInfo(norm) || isAdvice(norm));
 }
 
+// Each rule is one kind of work the firm does not take. The patterns need the
+// personal context, so "paid with a Visa card", "criminal fraud by our partner",
+// or "our accountant's malpractice" stay with the business practices.
+const DECLINES: { topic: string; pattern: RegExp }[] = [
+  {
+    topic: "An employee against an employer",
+    pattern: /\b(i was fired|i got fired|fired me|wrongful termination|my employer|laid me off|i was laid off)\b/,
+  },
+  { topic: "Divorce or custody", pattern: /\b(divorce|custody|child support|alimony)\b/ },
+  {
+    topic: "Criminal defense",
+    pattern: /\b(criminal defense|criminal charges?|criminal lawyer|i was arrested|i got arrested|been arrested|arrested me|my arrest|dui|dwi|felony|misdemeanor|probation|parole)\b/,
+  },
+  {
+    topic: "Personal injury",
+    pattern: /\b(personal injury|car accident|slip and fall|medical malpractice|workers comp|workers' comp)\b/,
+  },
+  {
+    topic: "Immigration",
+    pattern: /\b(immigration|asylum|deport|deported|deportation|green card|work visa|student visa|my visa|visa application|h-?1b)\b/,
+  },
+  { topic: "Personal bankruptcy", pattern: /\b(chapter 7|chapter 13|personal bankruptcy)\b/ },
+  { topic: "Apartment eviction", pattern: /\b(evicted from my apartment|evicting me from my apartment|evict me from my apartment|eviction from my apartment)\b/ },
+];
+
+// An owner, partner, or founder who was "fired" or pushed out of their own
+// company is a partnership dispute, not an employee claim.
+function ownerContext(norm: string): boolean {
+  return /\b(i own|we own|my company|my shares|my stake|my equity|co-?founders?|my partners?|shareholders?|member of the llc|\d+ ?(%|percent))\b/.test(norm);
+}
+
 function isOut(norm: string): boolean {
-  if (/\b(former employee|our employee|my tenant|commercial lease)\b/.test(norm)) return false;
-  return (
-    /\b(divorce|custody|child support)\b/.test(norm) ||
-    /\b(criminal|arrested|dui|felony|probation)\b/.test(norm) ||
-    /\b(personal injury|car accident|slip and fall|malpractice|workers comp)\b/.test(norm) ||
-    /\b(immigration|visa|asylum|deport)\b/.test(norm) ||
-    /\b(chapter 7|personal bankruptcy)\b/.test(norm) ||
-    /\b(i was fired|fired me|wrongful termination|my employer)\b/.test(norm) ||
-    /\b(evicted from my apartment|evicting me from my apartment)\b/.test(norm)
-  );
+  return declineTopic(norm) !== "";
 }
 
 export type EngagementKind = "opened" | "asked" | "qualifying" | "declined" | "refused" | "filed";
@@ -505,15 +531,13 @@ export function engagementOf(input: {
 }
 
 function declineTopic(norm: string): string {
-  if (!isOut(norm)) return "";
-  if (/\b(i was fired|fired me|wrongful termination|my employer)\b/.test(norm)) return "An employee against an employer";
-  if (/\b(divorce|custody|child support)\b/.test(norm)) return "Divorce or custody";
-  if (/\b(criminal|arrested|dui|felony|probation)\b/.test(norm)) return "Criminal defense";
-  if (/\b(personal injury|car accident|slip and fall|malpractice|workers comp)\b/.test(norm)) return "Personal injury";
-  if (/\b(immigration|visa|asylum|deport)\b/.test(norm)) return "Immigration";
-  if (/\b(chapter 7|personal bankruptcy)\b/.test(norm)) return "Personal bankruptcy";
-  if (/\b(evicted from my apartment|evicting me from my apartment)\b/.test(norm)) return "Apartment eviction";
-  return "Outside the practice";
+  if (/\b(former employee|our employee|my tenant|commercial lease)\b/.test(norm)) return "";
+  for (const rule of DECLINES) {
+    if (!rule.pattern.test(norm)) continue;
+    if (rule.topic === "An employee against an employer" && ownerContext(norm)) continue;
+    return rule.topic;
+  }
+  return "";
 }
 
 function stopFor(phase: IntakePhase): string {
@@ -548,7 +572,7 @@ function stopFor(phase: IntakePhase): string {
 }
 
 function declineText(norm: string): string {
-  const why = /\b(i was fired|fired me|wrongful termination|my employer)\b/.test(norm)
+  const why = declineTopic(norm) === "An employee against an employer"
     ? "The firm represents businesses and their owners, not an employee suing an employer."
     : "The firm doesn't take that work. The site says no personal injury and no criminal defense, and the practice is business law in New York and New Jersey.";
   return `${why}\n\n${firm.referralLine}`;
