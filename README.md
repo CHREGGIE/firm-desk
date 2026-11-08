@@ -4,7 +4,7 @@ A test intake desk for [Ainsworth Gorkin](https://ainsworthgorkin.com), a Brookl
 
 The desk qualifies a matter, asks for the company, the other side, the deadline, and the papers, and files a packet a lawyer can review. It answers only from `src/lib/firm.ts`. It does not call a language model, invent a fee, or say how a case comes out.
 
-Open `/review` to read the queue. Open `/admin` for opens, drop-off, and the share of conversations that became a file. Both use the same password. On a dev server it is `desk-review`. On the published app it is the `REVIEW_PASSWORD` secret.
+Open `/review` to read the queue. Open `/admin` for opens, drop-off, and the share of conversations that became a file. Both use the same password. On the published app it is the `REVIEW_PASSWORD` secret. There is no built-in password. A dev server without `REVIEW_PASSWORD` makes a random one each time it starts and prints it on the login page.
 
 ## Use it
 
@@ -56,6 +56,13 @@ Then open the site on port **3847**.
 npm test
 npm run lint
 ```
+
+## Security
+
+- **Review login.** A wrong password waits 400 ms. After 8 misses from one address in 15 minutes, the login answers 429. Use a long `REVIEW_PASSWORD`.
+- **Write routes.** `/api/chat`, `/api/consultations`, `/api/uploads`, `/api/activity`, and the review login and logout refuse a POST whose `Origin` names another site. Each route also has a per-address limit. The limit is kept inside one server process, so on Vercel it slows one caller down but is not a hard global cap. For a hard cap, add a Vercel Firewall rate-limit rule on `/api/*`.
+- **Uploads.** The server makes each draft id and signs it with `DESK_SECRET`, or with `REVIEW_PASSWORD` when `DESK_SECRET` is unset. A visitor can't invent new ids to get around the five-file limit. Changing either secret cancels drafts that haven't been filed yet.
+- **Framing.** Only `/embed` can be framed, and only by ainsworthgorkin.com, www.ainsworthgorkin.com, and `*.squarespace.com` (for the editor preview). Every other page sends `frame-ancestors 'self'`. To change the list, set `EMBED_ANCESTORS` (space separated, CSP syntax) before a build.
 
 ## Where messages go
 

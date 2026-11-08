@@ -1,4 +1,7 @@
-export async function POST() {
+import { forbidden, sameOrigin } from "@/lib/guard";
+
+export async function POST(request: Request) {
+  if (!sameOrigin(request)) return forbidden();
   return new Response(JSON.stringify({ ok: true }), {
     headers: {
       "content-type": "application/json",

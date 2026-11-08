@@ -1,6 +1,9 @@
+import { clientIp, forbidden, overLimit, sameOrigin, slowDown } from "@/lib/guard";
 import { markDocuments, recordOpen, validVisitId } from "@/lib/visits";
 
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return forbidden();
+  if (overLimit(`activity:${clientIp(request)}`, 60, 10 * 60 * 1000)) return slowDown();
   let body: unknown;
   try {
     body = await request.json();

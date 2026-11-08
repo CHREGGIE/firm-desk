@@ -50,7 +50,7 @@ export function ReviewLogin({
       </label>
       {hint && (
         <p className="mt-3 text-sm text-muted-foreground">
-          On this computer the test password is <span className="text-foreground">{hint}</span>.
+          On this dev server the password is <span className="text-foreground">{hint}</span>.
         </p>
       )}
       {error && (

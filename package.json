@@ -7,7 +7,7 @@
     "build": "next build && node scripts/migrate.mjs",
     "start": "next start -p 3847",
     "lint": "eslint",
-    "test": "env -u DATABASE_URL tsx --test src/lib/chat.test.ts src/lib/metrics.test.ts",
+    "test": "env -u DATABASE_URL tsx --test src/lib/chat.test.ts src/lib/metrics.test.ts src/lib/guard.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -8,6 +8,7 @@ import {
   type IntakeDraft,
   type IntakePhase,
 } from "@/lib/chat";
+import { clientIp, forbidden, mintDraftId, overLimit, sameOrigin, signedDraftId, slowDown } from "@/lib/guard";
 import { createLead, validateLead } from "@/lib/leads";
 import { recordChat, validVisitId } from "@/lib/visits";
 
@@ -28,7 +29,12 @@ const PHASES = new Set<IntakePhase>([
   "saved",
 ]);
 
+const CHAT_LIMIT = 120;
+const CHAT_WINDOW_MS = 10 * 60 * 1000;
+
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return forbidden();
+  if (overLimit(`chat:${clientIp(request)}`, CHAT_LIMIT, CHAT_WINDOW_MS)) return slowDown();
   let body: unknown;
   try {
     body = await request.json();
@@ -46,6 +52,7 @@ export async function POST(request: Request) {
   }
 
   let result = respond(messages, parseIntake(payload.intake));
+  result = { ...result, intake: { ...result.intake, draftId: serverDraftId(result.intake.draftId) } };
   let filed: { reference: string; status: "urgent" | "ready" | "thin" } | undefined;
   if (result.readyToSave) {
     const validated = validateLead(result.intake, "chat");
@@ -98,6 +105,17 @@ export async function POST(request: Request) {
     suggestions: result.suggestions,
     intake: result.intake,
   });
+}
+
+// respond() runs without the server secret, so any draft id it returns, or one
+// a visitor sent back, is swapped for a minted one unless it is already signed.
+function serverDraftId(value: string): string {
+  if (!value || signedDraftId(value)) return value;
+  try {
+    return mintDraftId();
+  } catch {
+    return "";
+  }
 }
 
 function parseMessages(value: unknown): ChatTurn[] | null {

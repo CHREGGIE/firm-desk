@@ -1,9 +1,15 @@
 import { firm } from "@/lib/firm";
+import { clientIp, forbidden, overLimit, sameOrigin, signedDraftId, slowDown } from "@/lib/guard";
 import { createLead, leadStatus, validateLead } from "@/lib/leads";
 import { papersAttached } from "@/lib/metrics";
 import { recordFormFile } from "@/lib/visits";
 
+const FORM_LIMIT = 10;
+const FORM_WINDOW_MS = 60 * 60 * 1000;
+
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return forbidden();
+  if (overLimit(`form:${clientIp(request)}`, FORM_LIMIT, FORM_WINDOW_MS)) return slowDown();
   let body: unknown;
   try {
     body = await request.json();
@@ -13,7 +19,8 @@ export async function POST(request: Request) {
   if (!body || typeof body !== "object") {
     return Response.json({ error: "We couldn't read that form." }, { status: 400 });
   }
-  const raw = body as Record<string, unknown>;
+  const raw = { ...(body as Record<string, unknown>) };
+  if (!signedDraftId(raw.draftId)) raw.draftId = "";
   if (typeof raw.fax === "string" && raw.fax.trim()) {
     return Response.json({ reference: "AG-0000", status: "thin" });
   }
