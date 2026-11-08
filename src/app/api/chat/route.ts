@@ -9,6 +9,7 @@ import {
   type IntakePhase,
 } from "@/lib/chat";
 import { createLead, validateLead } from "@/lib/leads";
+import { recordChat, validVisitId } from "@/lib/visits";
 
 const PHASES = new Set<IntakePhase>([
   "idle",
@@ -38,13 +39,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "The desk couldn't read that." }, { status: 400 });
   }
 
-  const payload = body as { messages?: unknown; intake?: unknown };
+  const payload = body as { messages?: unknown; intake?: unknown; visitId?: unknown; source?: unknown };
   const messages = parseMessages(payload.messages);
   if (!messages) {
     return Response.json({ error: "Send a short message and try again." }, { status: 400 });
   }
 
   let result = respond(messages, parseIntake(payload.intake));
+  let filed: { reference: string; status: "urgent" | "ready" | "thin" } | undefined;
   if (result.readyToSave) {
     const validated = validateLead(result.intake, "chat");
     if (!validated.ok) {
@@ -52,6 +54,7 @@ export async function POST(request: Request) {
     } else {
       try {
         const saved = await createLead(validated.value);
+        filed = saved;
         const card: ChatCard = { kind: "confirmation", reference: saved.reference, title: "File for review" };
         result = {
           text: savedMessage(saved.reference, saved.status),
@@ -69,6 +72,23 @@ export async function POST(request: Request) {
           suggestions: ["Yes, send it"],
         };
       }
+    }
+  }
+
+  if (validVisitId(payload.visitId)) {
+    const lastVisitor = [...messages].reverse().find((message) => message.role === "visitor");
+    try {
+      await recordChat({
+        visitId: payload.visitId,
+        source: payload.source === "embed" ? "embed" : "site",
+        visitorMessages: messages.filter((message) => message.role === "visitor").length,
+        intake: result.intake,
+        lastVisitorText: lastVisitor?.text ?? "",
+        reference: filed?.reference,
+        status: filed?.status,
+      });
+    } catch {
+      console.error("visit update failed");
     }
   }
 

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { visitIdFor } from "@/lib/visit-id";
 
 type SavedFile = { id: string; filename: string };
 
-export function FileTray({ draftId }: { draftId: string }) {
+export function FileTray({ draftId, embed = false }: { draftId: string; embed?: boolean }) {
   const [files, setFiles] = useState<SavedFile[]>([]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -17,6 +18,7 @@ export function FileTray({ draftId }: { draftId: string }) {
     for (const file of Array.from(list)) {
       const body = new FormData();
       body.set("draftId", draftId);
+      body.set("visitId", visitIdFor(embed));
       body.set("file", file);
       const response = await fetch("/api/uploads", { method: "POST", body });
       const data = (await response.json().catch(() => null)) as { id?: string; filename?: string; error?: string } | null;

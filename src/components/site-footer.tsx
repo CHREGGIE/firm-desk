@@ -72,6 +72,11 @@ export function SiteFooter() {
                 Lawyer review
               </Link>
             </li>
+            <li>
+              <Link className="underline decoration-border underline-offset-4" href="/admin">
+                Desk admin
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

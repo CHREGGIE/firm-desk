@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { getMatter } from "@/lib/firm";
 import { listLeads } from "@/lib/leads";
@@ -25,6 +26,13 @@ export default async function ReviewPage() {
         <div className="mt-8">
           <ReviewLogin hint={localReviewHint()} />
         </div>
+        <p className="mt-6 text-sm text-muted-foreground">
+          The same password opens the{" "}
+          <Link className="underline underline-offset-4" href="/admin">
+            desk admin
+          </Link>
+          .
+        </p>
       </main>
     );
   }
@@ -37,7 +45,12 @@ export default async function ReviewPage() {
           <p className="text-[0.68rem] tracking-[0.2em] text-primary uppercase">Review</p>
           <h1 className="mt-3 font-heading text-4xl tracking-tight">Leads ready to read</h1>
         </div>
-        <ReviewLogout />
+        <div className="flex items-center gap-4">
+          <Link className="text-sm underline underline-offset-4" href="/admin">
+            Desk admin
+          </Link>
+          <ReviewLogout />
+        </div>
       </div>
       {leads.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">No files yet. A qualified chat will show up here.</p>

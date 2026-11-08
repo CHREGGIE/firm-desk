@@ -1,5 +1,6 @@
 import { saveDraftFile } from "@/lib/leads";
 import { inspectUpload } from "@/lib/uploads";
+import { markDocuments, validVisitId } from "@/lib/visits";
 
 export async function POST(request: Request) {
   let form: FormData;
@@ -26,6 +27,14 @@ export async function POST(request: Request) {
       contentType: inspected.contentType,
       bytes,
     });
+    const visitId = form.get("visitId");
+    if (validVisitId(visitId)) {
+      try {
+        await markDocuments(visitId);
+      } catch {
+        console.error("visit update failed");
+      }
+    }
     return Response.json(saved);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";

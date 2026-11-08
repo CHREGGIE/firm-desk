@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function ReviewLogin({ hint }: { hint: string }) {
+export function ReviewLogin({
+  hint,
+  label = "Review password",
+  button = "Open the queue",
+}: {
+  hint: string;
+  label?: string;
+  button?: string;
+}) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -29,7 +37,7 @@ export function ReviewLogin({ hint }: { hint: string }) {
   return (
     <form className="max-w-sm" onSubmit={(event) => void onSubmit(event)}>
       <label className="block text-sm" htmlFor="review-password">
-        Review password
+        {label}
         <Input
           id="review-password"
           className="mt-2"
@@ -51,13 +59,13 @@ export function ReviewLogin({ hint }: { hint: string }) {
         </p>
       )}
       <Button type="submit" className="mt-4 h-11 px-4" disabled={pending || password.length === 0}>
-        Open the queue
+        {button}
       </Button>
     </form>
   );
 }
 
-export function ReviewLogout() {
+export function ReviewLogout({ label = "Lock the queue" }: { label?: string }) {
   const [pending, setPending] = useState(false);
   return (
     <button
@@ -69,7 +77,7 @@ export function ReviewLogout() {
         void fetch("/api/review/logout", { method: "POST" }).then(() => window.location.reload());
       }}
     >
-      Lock the queue
+      {label}
     </button>
   );
 }

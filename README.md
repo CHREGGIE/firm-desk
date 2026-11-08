@@ -4,7 +4,7 @@ A test intake desk for [Ainsworth Gorkin](https://ainsworthgorkin.com), a Brookl
 
 The desk qualifies a matter, asks for the company, the other side, the deadline, and the papers, and files a packet a lawyer can review. It answers only from `src/lib/firm.ts`. It does not call a language model, invent a fee, or say how a case comes out.
 
-Open `/review` to read the queue. On a dev server the password is `desk-review`. On the published app it is the `REVIEW_PASSWORD` secret.
+Open `/review` to read the queue. Open `/admin` for opens, drop-off, and the share of conversations that became a file. Both use the same password. On a dev server it is `desk-review`. On the published app it is the `REVIEW_PASSWORD` secret.
 
 ## Use it
 
@@ -34,7 +34,7 @@ Edit `src/lib/firm.ts`. The pages and the chatbot both read that file: name, pra
 
 This copy is meant to be deployed so a legal assistant can walk the intake and a lawyer can check the queue later. On Vercel the leads and papers are stored in a private Blob store. They stay after the assistant closes the tab. Locally, without that store, they still live in memory or in Postgres when `DATABASE_URL` is set.
 
-Set `REVIEW_PASSWORD` on the Vercel project for Production and Preview. The review page does not print that password. Share it with the assistant directly.
+Set `REVIEW_PASSWORD` on the Vercel project for Production and Preview. The review page does not print that password. Share it with the assistant directly. `/admin` uses that same password and reads the same private store.
 
 ```bash
 npx vercel

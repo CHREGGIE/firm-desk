@@ -1,5 +1,7 @@
 import { firm } from "@/lib/firm";
 import { createLead, leadStatus, validateLead } from "@/lib/leads";
+import { papersAttached } from "@/lib/metrics";
+import { recordFormFile } from "@/lib/visits";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -20,6 +22,18 @@ export async function POST(request: Request) {
   try {
     const saved = await createLead(validated.value);
     const status = saved.status || leadStatus(validated.value);
+    try {
+      await recordFormFile({
+        matter: validated.value.matter,
+        company: validated.value.company,
+        place: validated.value.place,
+        reference: saved.reference,
+        status,
+        documents: papersAttached(validated.value.docNote),
+      });
+    } catch {
+      console.error("visit update failed");
+    }
     const mark =
       status === "urgent"
         ? "It's marked as a deadline."

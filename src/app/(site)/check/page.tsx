@@ -107,7 +107,12 @@ export default function CheckPage() {
       </ul>
       <p className="mt-10 text-sm leading-6 text-muted-foreground">
         The review password is shared with you separately. On a dev computer it is written on the
-        review page. If a lead is missing, say so before filing another one.
+        review page. The same password opens{" "}
+        <Link className="underline underline-offset-4" href="/admin">
+          Desk admin
+        </Link>
+        , which counts who opened the desk, where they stopped, and how many became a file. If a
+        lead is missing, say so before filing another one.
       </p>
     </main>
   );

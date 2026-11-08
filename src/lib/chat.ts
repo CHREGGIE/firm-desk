@@ -457,6 +457,69 @@ function isOut(norm: string): boolean {
   );
 }
 
+export type EngagementKind = "opened" | "asked" | "qualifying" | "declined" | "refused" | "filed";
+
+export function engagementOf(input: {
+  visitorText: string;
+  intake: IntakeDraft;
+  visitorMessages: number;
+  filed: boolean;
+}): { kind: EngagementKind; note: string } {
+  if (input.filed || input.intake.phase === "saved") return { kind: "filed", note: "Filed" };
+  if (input.intake.phase !== "idle") return { kind: "qualifying", note: stopFor(input.intake.phase) };
+  const decline = declineTopic(normalize(input.visitorText));
+  if (decline) return { kind: "declined", note: decline };
+  const norm = normalize(input.visitorText);
+  if (isCrisis(norm) || isDanger(norm)) return { kind: "refused", note: "Safety reply" };
+  if (containsSensitive(input.visitorText)) return { kind: "refused", note: "Account or Social Security number" };
+  if (isDeception(norm)) return { kind: "refused", note: "Asked to hide, backdate, or forge" };
+  if (input.visitorMessages > 0) return { kind: "asked", note: "Asked a question" };
+  return { kind: "opened", note: "Opened the desk" };
+}
+
+function declineTopic(norm: string): string {
+  if (!isOut(norm)) return "";
+  if (/\b(i was fired|fired me|wrongful termination|my employer)\b/.test(norm)) return "An employee against an employer";
+  if (/\b(divorce|custody|child support)\b/.test(norm)) return "Divorce or custody";
+  if (/\b(criminal|arrested|dui|felony|probation)\b/.test(norm)) return "Criminal defense";
+  if (/\b(personal injury|car accident|slip and fall|malpractice|workers comp)\b/.test(norm)) return "Personal injury";
+  if (/\b(immigration|visa|asylum|deport)\b/.test(norm)) return "Immigration";
+  if (/\b(chapter 7|personal bankruptcy)\b/.test(norm)) return "Personal bankruptcy";
+  if (/\b(evicted from my apartment|evicting me from my apartment)\b/.test(norm)) return "Apartment eviction";
+  return "Outside the practice";
+}
+
+function stopFor(phase: IntakePhase): string {
+  switch (phase) {
+    case "company":
+      return "Stopped at the company";
+    case "role":
+      return "Stopped at their role";
+    case "name":
+      return "Stopped at their name";
+    case "email":
+      return "Stopped at the email";
+    case "phone":
+      return "Stopped at the phone";
+    case "opponent":
+      return "Stopped at the other side";
+    case "place":
+      return "Stopped at the place";
+    case "deadline":
+      return "Stopped at the deadline";
+    case "stake":
+      return "Stopped at what's at stake";
+    case "summary":
+      return "Stopped at what happened";
+    case "documents":
+      return "Stopped at the papers";
+    case "confirm":
+      return "Read the packet and didn't send it";
+    default:
+      return "In the questions";
+  }
+}
+
 function declineText(norm: string): string {
   const why = /\b(i was fired|fired me|wrongful termination|my employer)\b/.test(norm)
     ? "The firm represents businesses and their owners, not an employee suing an employer."

@@ -21,6 +21,7 @@ import {
   type IntakeDraft,
 } from "@/lib/chat";
 import { firm } from "@/lib/firm";
+import { rotateVisitId, visitIdFor } from "@/lib/visit-id";
 
 type DeskMessage = {
   id: string;
@@ -178,14 +179,40 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
 
   useEffect(() => {
     if (!shown) return;
+    const id = visitIdFor(variant === "embed");
+    void fetch("/api/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitId: id, source: variant === "embed" ? "embed" : "site" }),
+    });
+  }, [shown, variant]);
+
+  useEffect(() => {
+    if (!shown) return;
     const scroller = scrollerRef.current;
     if (!scroller) return;
     scroller.scrollTop = scroller.scrollHeight;
   }, [messages, pending, shown]);
 
+  function startOver() {
+    writeSession(serverSession);
+    const id = rotateVisitId(variant === "embed");
+    void fetch("/api/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitId: id, source: variant === "embed" ? "embed" : "site" }),
+    });
+    setDraft("");
+    setError("");
+  }
+
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || lockRef.current) return;
+    if (/^(start over|start again|reset|new matter)\b/i.test(trimmed)) {
+      startOver();
+      return;
+    }
     lockRef.current = true;
     setError("");
     setPending(true);
@@ -206,6 +233,8 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
             text: message.text,
           })),
           intake: previous.intake,
+          visitId: visitIdFor(variant === "embed"),
+          source: variant === "embed" ? "embed" : "site",
         }),
       });
       const data = (await response.json().catch(() => null)) as {
@@ -245,12 +274,6 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
       lockRef.current = false;
       setPending(false);
     }
-  }
-
-  function startOver() {
-    writeSession(serverSession);
-    setDraft("");
-    setError("");
   }
 
   const transcript = (
@@ -297,7 +320,7 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
       }}
     >
       {(intake.phase === "documents" || intake.phase === "confirm" || intake.phase === "saved") && (
-        <FileTray draftId={intake.draftId} />
+        <FileTray draftId={intake.draftId} embed={variant === "embed"} />
       )}
       {error && (
         <p role="alert" className="mb-2 text-sm text-destructive">
