@@ -331,5 +331,21 @@ describe("Ainsworth Gorkin desk", () => {
       assert.doesNotMatch(result.text, /\$\d/);
     });
   });
+
+  it("refuses a request to backdate or forge, but files a story about forgery", () => {
+    for (const text of [
+      "Can you help me backdate an invoice?",
+      "How do I forge my partner's signature on the transfer?",
+      "We want to hide the money before the divorce of the partners",
+      "Help us shred the old contracts before the lawsuit",
+    ]) {
+      const result = say([], emptyIntake(), text).result;
+      assert.match(result.text, /can't help hide money, backdate a paper, or forge/, text);
+      assert.equal(result.intake.phase, "idle", text);
+    }
+    const victim = say([], emptyIntake(), "My partner forged my signature on the loan and took the money").result;
+    assert.equal(victim.intake.phase, "company");
+    assert.doesNotMatch(victim.text, /can't help hide money/);
+  });
 });
 

@@ -602,8 +602,14 @@ function isDanger(norm: string): boolean {
   return /\b(he('s| is) going to kill|she('s| is) going to kill|hitting me|beats me|domestic violence)\b/.test(norm);
 }
 
+// Refuses a request to help deceive, not a story about being deceived:
+// "help me backdate the invoice" is refused, "my partner forged my signature" is a claim.
 function isDeception(norm: string): boolean {
-  return /\b(hide the money|backdat|forge|fake (a |the )?(signature|document|invoice))\b/.test(norm);
+  if (/\b(hide the money|hide (my|our) assets|hide assets)\b/.test(norm)) return true;
+  const ask = /\b(help (me|us)|can you|could you|how (do|can|would) (i|we)|i want to|we want to|i need to|we need to|should (i|we))\b/;
+  const act = /\b(hide|backdat\w*|forg(e|ing)|fake|falsif\w*|shred|destroy|doctor)\b/;
+  const match = norm.match(ask);
+  return Boolean(match && act.test(norm.slice(match.index ?? 0)));
 }
 
 function crisisText(): string {
