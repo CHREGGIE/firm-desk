@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  containsSensitive,
   emptyIntake,
   respond,
   type ChatTurn,
@@ -38,7 +39,9 @@ describe("Ainsworth Gorkin desk", () => {
     assert.match(where.text, /11225/);
     assert.match(where.text, /212/);
     const hours = say([], emptyIntake(), "What are your hours?").result;
-    assert.match(hours.text, /doesn't publish/i);
+    assert.match(hours.text, /Monday to Thursday, 9:00 AM to 7:00 PM/);
+    assert.match(hours.text, /Friday, 9:00 AM to 4:00 PM/);
+    assert.doesNotMatch(hours.text, /junior/);
     assert.doesNotMatch(hours.text, /5:30/);
   });
 
@@ -167,4 +170,182 @@ describe("Ainsworth Gorkin desk", () => {
     const good = inspectUpload("note.txt", Buffer.from("The contract is attached in spirit."));
     assert.equal(good.ok, true);
   });
+
+  describe("fixes from the November review", () => {
+    function walk(lines: string[], opener = story) {
+      let step = say([], emptyIntake(), opener);
+      for (const line of lines) step = say(step.history, step.intake, line);
+      return step;
+    }
+    const answers = [
+      "Northwind Supply LLC",
+      "Owner",
+      "Pat Doe",
+      "pat@exmaple.com",
+      "skip",
+      "Acme Corp",
+      "Brooklyn",
+      "none",
+      "$80,000",
+      "I don't have them",
+    ];
+
+    it("goes straight back to the packet after one answer is changed", () => {
+      let step = walk(answers);
+      assert.equal(step.intake.phase, "confirm");
+      step = say(step.history, step.intake, "No, change the email");
+      assert.equal(step.intake.phase, "email");
+      step = say(step.history, step.intake, "pat@example.com");
+      assert.equal(step.intake.phase, "confirm");
+      assert.equal(step.intake.email, "pat@example.com");
+      assert.equal(step.intake.opponent, "Acme Corp");
+      assert.match(step.result.text, /Reach: pat@example\.com/);
+      step = say(step.history, step.intake, "Yes, send it");
+      assert.equal(step.result.readyToSave, true);
+    });
+
+    it("lets the visitor change the name, role, place, or stake", () => {
+      for (const [ask, phase, answer, field, value] of [
+        ["change my name", "name", "Patricia Doe", "name", "Patricia Doe"],
+        ["fix my role", "role", "Partner", "role", "Partner"],
+        ["the state is wrong", "place", "New Jersey", "place", "New Jersey"],
+        ["change the amount at stake", "stake", "$95,000", "stake", "$95,000"],
+      ] as const) {
+        let step = walk(answers);
+        step = say(step.history, step.intake, ask);
+        assert.equal(step.intake.phase, phase, ask);
+        step = say(step.history, step.intake, answer);
+        assert.equal(step.intake.phase, "confirm", ask);
+        assert.equal(step.intake[field], value, ask);
+      }
+    });
+
+    it("does not file a yes that also asks for a change", () => {
+      let step = walk(answers);
+      step = say(step.history, step.intake, "Yes, but change the email first");
+      assert.equal(step.result.readyToSave, false);
+      assert.equal(step.intake.phase, "email");
+    });
+
+    it("answers a question at the packet without changing a field", () => {
+      let step = walk(answers);
+      step = say(step.history, step.intake, "Where is the office?");
+      assert.equal(step.intake.phase, "confirm");
+      assert.match(step.result.text, /President Street/);
+      assert.equal(step.result.readyToSave, false);
+    });
+
+    it("keeps an answer that starts like a question", () => {
+      let step = walk(answers.slice(0, 8), "A customer stopped paying");
+      step = say(step.history, step.intake, "How much? About $40,000 in unpaid invoices");
+      assert.equal(step.intake.stake, "How much? About $40,000 in unpaid invoices");
+      assert.equal(step.intake.phase, "summary");
+      step = say(step.history, step.intake, "What happened is they took delivery at the agreed rate and then refused to pay.");
+      assert.equal(step.intake.phase, "documents");
+      assert.match(step.intake.summary, /refused to pay/);
+    });
+
+    it("asks what happened instead of reusing the deadline answer", () => {
+      const step = walk(
+        [...answers.slice(0, 7), "Our answer to the complaint is due November 30 and a hearing is set", "$40,000"],
+        "A customer stopped paying",
+      );
+      assert.equal(step.intake.phase, "summary");
+      assert.equal(step.intake.summary, "");
+    });
+
+    it("refuses card, account, and Social Security numbers but not invoices and dates", () => {
+      assert.equal(containsSensitive("Invoice 4471 dated 03/15/2026 for $40,000"), false);
+      assert.equal(containsSensitive("Call 212-555-0100 ext 1234"), false);
+      assert.equal(containsSensitive("212-555-0100 or 917-555-0199"), false);
+      assert.equal(containsSensitive("We billed $12,500 on 04/02/2026 and $40,000 on 05/01/2026"), false);
+      assert.equal(containsSensitive("card 4242 4242 4242 4242"), true);
+      assert.equal(containsSensitive("4111-1111-1111-1111"), true);
+      assert.equal(containsSensitive("123-45-6789"), true);
+      assert.equal(containsSensitive("my account number is 00123456789"), true);
+    });
+  });
+
+  describe("routing and declines", () => {
+    function first(text: string) {
+      return say([], emptyIntake(), text).result;
+    }
+    const declined = (text: string) => /626-7373/.test(first(text).text);
+
+    it("sends contract review, NDAs, and buying or selling a company to Levi", () => {
+      for (const [text, slug] of [
+        ["I need a contract reviewed", "agreements"],
+        ["Can you review an NDA before I sign it?", "agreements"],
+        ["We want to buy a small business", "acquisitions"],
+        ["I want to sell my company", "acquisitions"],
+      ] as const) {
+        const result = first(text);
+        assert.equal(result.intake.matter, slug, text);
+        assert.match(result.text, /Levi Ainsworth/, text);
+      }
+    });
+
+    it("starts a litigation file for a lawsuit or a demand letter", () => {
+      for (const text of ["We got sued", "I got a demand letter", "A supplier sent us a cease and desist"]) {
+        const result = first(text);
+        assert.equal(result.intake.phase, "company", text);
+        assert.match(result.text, /Shaya Gorkin/, text);
+      }
+    });
+
+    it("keeps an owner pushed out of their own company", () => {
+      const result = first("I was fired as CEO by my co-founders and they froze me out of the company I own 40% of");
+      assert.equal(result.intake.matter, "partnership");
+      assert.equal(declined("My partners fired me from the LLC and stopped paying my distributions"), false);
+    });
+
+    it("does not decline on Visa, criminal, or malpractice alone", () => {
+      assert.equal(first("Our customer paid with a Visa card and then charged back $30,000 after taking the goods").intake.matter, "contract");
+      assert.equal(first("Our former partner committed criminal fraud and drained the company account").intake.matter, "partnership");
+      const malpractice = first("Our accounting firm's malpractice cost our company $200,000 in penalties");
+      assert.equal(malpractice.intake.phase, "company");
+      assert.doesNotMatch(malpractice.text, /free evaluation\. You describe/);
+    });
+
+    it("still declines the work the firm does not take", () => {
+      for (const text of [
+        "I was fired",
+        "My employer won't pay my overtime",
+        "I need a divorce lawyer",
+        "I was arrested last night",
+        "My work visa is expiring",
+        "I was in a car accident",
+        "Medical malpractice by my doctor",
+        "I need to file chapter 7",
+        "My landlord is evicting me from my apartment",
+      ]) {
+        assert.equal(declined(text), true, text);
+        assert.equal(first(text).intake.phase, "idle", text);
+      }
+    });
+
+    it("answers a fee question that is phrased as a sentence", () => {
+      const result = first("I want to know how much you charge for a first meeting");
+      assert.equal(result.intake.phase, "idle");
+      assert.match(result.text, /free evaluation/);
+      assert.doesNotMatch(result.text, /\$\d/);
+    });
+  });
+
+  it("refuses a request to backdate or forge, but files a story about forgery", () => {
+    for (const text of [
+      "Can you help me backdate an invoice?",
+      "How do I forge my partner's signature on the transfer?",
+      "We want to hide the money before the divorce of the partners",
+      "Help us shred the old contracts before the lawsuit",
+    ]) {
+      const result = say([], emptyIntake(), text).result;
+      assert.match(result.text, /can't help hide money, backdate a paper, or forge/, text);
+      assert.equal(result.intake.phase, "idle", text);
+    }
+    const victim = say([], emptyIntake(), "My partner forged my signature on the loan and took the money").result;
+    assert.equal(victim.intake.phase, "company");
+    assert.doesNotMatch(victim.text, /can't help hide money/);
+  });
 });
+

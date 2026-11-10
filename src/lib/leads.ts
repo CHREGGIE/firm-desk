@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createBlobLead, listBlobLeads, readBlobFile, saveBlobFile, usesBlobStore } from "./blob-leads";
 import { containsSensitive, isUrgentDeadline } from "./chat";
 import { sql } from "./db";
+import { FILED_ALREADY, UploadRefused } from "./upload-errors";
 import { getMatter } from "./firm";
 
 const EMAIL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
@@ -203,12 +204,14 @@ export async function saveDraftFile(input: {
   bytes: Buffer;
 }): Promise<{ id: string; filename: string; size: number }> {
   if (durableBlob()) return saveBlobFile(input);
+  const filed = await sql(`select 1 from leads where draft_id = $1 limit 1`, [input.draftId]);
+  if (filed.length > 0) throw new UploadRefused(FILED_ALREADY);
   const existing = await sql<{ count: string }>(
     `select count(*)::text as count from lead_files where draft_id = $1`,
     [input.draftId],
   );
   if (Number(existing[0]?.count ?? 0) >= 5) {
-    throw new Error("Five files is the limit on one lead.");
+    throw new UploadRefused("Five files is the limit on one lead.");
   }
   const id = randomBytes(16).toString("hex");
   await sql(

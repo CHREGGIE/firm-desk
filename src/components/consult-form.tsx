@@ -8,18 +8,10 @@ import { practices } from "@/lib/firm";
 
 type Errors = Partial<Record<"company" | "name" | "email" | "opponent" | "summary" | "matter", string>>;
 
-function draftId() {
-  const bytes = new Uint8Array(12);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 export function ConsultForm() {
+  // The server mints the draft id with the first file. Without a file there
+  // is no draft, and the packet is filed without one.
   const idRef = useRef("");
-  function ensureId() {
-    if (!idRef.current) idRef.current = draftId();
-    return idRef.current;
-  }
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("Owner");
   const [name, setName] = useState("");
@@ -55,14 +47,17 @@ export function ConsultForm() {
     setFormError("");
     for (const file of Array.from(list)) {
       const body = new FormData();
-      body.set("draftId", ensureId());
+      body.set("draftId", idRef.current || "new");
       body.set("file", file);
       const response = await fetch("/api/uploads", { method: "POST", body });
-      const data = (await response.json().catch(() => null)) as { filename?: string; error?: string } | null;
+      const data = (await response.json().catch(() => null)) as
+        | { filename?: string; draftId?: string; error?: string }
+        | null;
       if (!response.ok || !data?.filename) {
         setFormError(data?.error || "That file didn't save.");
         return;
       }
+      if (data.draftId) idRef.current = data.draftId;
       setFiles((current) => [...current, data.filename!]);
     }
   }
@@ -91,7 +86,7 @@ export function ConsultForm() {
           stake,
           summary,
           docNote: files.length ? `Attached: ${files.join(", ")}` : "No papers attached on the form.",
-          draftId: ensureId(),
+          draftId: idRef.current,
           fax,
         }),
       });

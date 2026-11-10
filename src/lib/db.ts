@@ -17,6 +17,12 @@ export async function sql<T = Record<string, unknown>>(
     pool ??= new pg.Pool({ connectionString: databaseUrl, max: 5 });
     return (await pool.query(text, params)).rows as T[];
   }
+  // On Vercel an in-memory database lives in one short-lived function. A lead
+  // written there is gone within minutes while the visitor holds a reference.
+  // Refuse instead, so the desk tells them to call.
+  if (process.env.VERCEL) {
+    throw new Error("No lead storage: set DATABASE_URL or connect a private Blob store.");
+  }
   globalForDb.__agDesk ??= startLocal().catch((error: unknown) => {
     globalForDb.__agDesk = undefined;
     throw error;

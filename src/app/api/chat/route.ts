@@ -8,6 +8,7 @@ import {
   type IntakeDraft,
   type IntakePhase,
 } from "@/lib/chat";
+import { clientIp, forbidden, mintDraftId, overLimit, sameOrigin, signedDraftId, slowDown } from "@/lib/guard";
 import { createLead, validateLead } from "@/lib/leads";
 import { recordChat, validVisitId } from "@/lib/visits";
 
@@ -28,7 +29,12 @@ const PHASES = new Set<IntakePhase>([
   "saved",
 ]);
 
+const CHAT_LIMIT = 120;
+const CHAT_WINDOW_MS = 10 * 60 * 1000;
+
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return forbidden();
+  if (overLimit(`chat:${clientIp(request)}`, CHAT_LIMIT, CHAT_WINDOW_MS)) return slowDown();
   let body: unknown;
   try {
     body = await request.json();
@@ -46,6 +52,7 @@ export async function POST(request: Request) {
   }
 
   let result = respond(messages, parseIntake(payload.intake));
+  result = { ...result, intake: { ...result.intake, draftId: serverDraftId(result.intake.draftId) } };
   let filed: { reference: string; status: "urgent" | "ready" | "thin" } | undefined;
   if (result.readyToSave) {
     const validated = validateLead(result.intake, "chat");
@@ -100,18 +107,34 @@ export async function POST(request: Request) {
   });
 }
 
+// respond() runs without the server secret, so any draft id it returns, or one
+// a visitor sent back, is swapped for a minted one unless it is already signed.
+function serverDraftId(value: string): string {
+  if (!value || signedDraftId(value)) return value;
+  try {
+    return mintDraftId();
+  } catch {
+    return "";
+  }
+}
+
+// The desk only needs recent turns. A long conversation keeps its last 40
+// instead of being refused, which used to strand anyone who fixed an answer.
+const MAX_TURNS = 40;
+
 function parseMessages(value: unknown): ChatTurn[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 40) return null;
+  if (!Array.isArray(value) || value.length === 0 || value.length > 400) return null;
   const messages: ChatTurn[] = [];
-  for (const item of value) {
+  for (const item of value.slice(-MAX_TURNS)) {
     if (!item || typeof item !== "object") return null;
     const role = (item as { role?: unknown }).role;
     const text = (item as { text?: unknown }).text;
     if (role !== "visitor" && role !== "desk") return null;
     if (typeof text !== "string") return null;
     const trimmed = text.trim();
-    if (!trimmed || trimmed.length > 2000) return null;
-    messages.push({ role, text: trimmed });
+    if (!trimmed) return null;
+    if (role === "visitor" && trimmed.length > 2000) return null;
+    messages.push({ role, text: trimmed.slice(0, 4000) });
   }
   if (messages[messages.length - 1]?.role !== "visitor") return null;
   return messages;
@@ -139,6 +162,7 @@ function parseIntake(value: unknown): IntakeDraft {
     summary: clip(raw.summary, 1000),
     docNote: clip(raw.docNote, 1000),
     draftId: /^[a-f0-9]{24}$/.test(clip(raw.draftId, 64)) ? clip(raw.draftId, 64) : "",
+    editing: raw.editing === true,
   };
 }
 

@@ -228,7 +228,7 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: nextMessages.map((message) => ({
+          messages: nextMessages.slice(-40).map((message) => ({
             role: message.role,
             text: message.text,
           })),
@@ -319,8 +319,17 @@ export function Desk({ variant = "sheet" }: { variant?: "sheet" | "embed" }) {
         void send(draft);
       }}
     >
-      {(intake.phase === "documents" || intake.phase === "confirm" || intake.phase === "saved") && (
+      {(intake.phase === "documents" || intake.phase === "confirm") && (
         <FileTray draftId={intake.draftId} embed={variant === "embed"} />
+      )}
+      {intake.phase === "saved" && (
+        <p className="mb-3 text-sm text-muted-foreground">
+          This file is sent. To add papers now, email them to{" "}
+          <a className="underline underline-offset-4" href={firm.emailHref}>
+            {firm.email}
+          </a>{" "}
+          with your reference.
+        </p>
       )}
       {error && (
         <p role="alert" className="mb-2 text-sm text-destructive">
